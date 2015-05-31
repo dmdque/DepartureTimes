@@ -20,15 +20,27 @@
     <div>Your location is: </div>
     <div class="form-group">
         User custom location:<br>
-        <input type="checkbox" name="custom_location" class="form-control" checked>
+        <div class="col-md-1">
+            <input type="checkbox" name="custom_location" class="form-control" checked>
+        </div>
         <!--show only if checkbox is checked-->
-        <input id="lat" type="number" name="latitude" class="form-control" value="37.78"></input>
-        <input id="lon" type="number" name="longitude" class="form-control" value="-122.2"></input>
+        <div class="col-md-3">
+            <input id="lat" type="number" name="latitude" class="form-control" value="43.7387793"></input>
+        </div>
+        <div class="col-md-3">
+            <input id="lon" type="number" name="longitude" class="form-control" value="-79.3138695"></input>
+        </div>
+        <button class="btn btn-default" onclick="getDepartureTimes()">Get</button>
     </div>
-    <button onclick="getDepartureTimes()">Get</button>
 
-    <div id="mapholder"></div>
-    <div id="test"></div>
+    <div class="row">
+        <div class="col-md-6">
+            <div id="test"></div>
+        </div>
+        <div class="col-md-6">
+            <div id="mapholder"></div>
+        </div>
+    </div>
     <div id="closest_busses"></div>
     <div id="closest_bus_stops"></div>
     <div id="demo"></div>
@@ -42,42 +54,36 @@
 </script>
 
 <script type="text/template" id="busStops-template">
-<div class="Bus Stops"></div>
-    <div class="row">
-        <div class="col-md-6">
-            <table class="table table-bordered">
-                <thead>
-                    <tr>
-                        <th>#</th>
-                        <th>Bus Title</th>
-                        <th>Prediction</th>
-                        <th>Other</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <% _.each(collection, function(model) { %>
-                        <tr>
-                            <td><%= model.stopTag %></td>
-                            <td><%= model.title %></td>
+<div class="bus-stops-collection-view"></div>
+    <table class="table table-bordered">
+        <thead>
+            <tr>
+                <th>Bus Title</th>
+                <th>Direction</th>
+                <th>Prediction</th>
+            </tr>
+        </thead>
+        <tbody>
+            <% _.each(collection, function(model) { %>
+                <tr>
+                    <td><%= model.title %></td>
+                    <td><%= model.direction %></td>
 
-                            <td>
-                            <% var comma_flag = false %>
-                            <% _.each(model.predictions, function(prediction) { %>
-                                <% if (comma_flag) { %>
-                                    <span>, </span>
-                                <% } else { %>
-                                    <% comma_flag = true %>
-                                <% } %>
-                                <%= Math.trunc(prediction.seconds / 60) %>:<%= prediction.seconds % 60 %>
-                            <% }); %>
-                            </td>
-                            <td>other</td>
-                        </tr>
+                    <td>
+                    <% var comma_flag = false %>
+                    <% _.each(model.predictions, function(prediction) { %>
+                        <% if (comma_flag) { %>
+                            <span>, </span>
+                        <% } else { %>
+                            <% comma_flag = true %>
+                        <% } %>
+                        <%= Math.trunc(prediction.seconds / 60) %>:<%= prediction.seconds % 60 %>
                     <% }); %>
-                </tbody>
-            </table>
-        </div>
-</div>
+                    </td>
+                </tr>
+            <% }); %>
+        </tbody>
+    </table>
 </script>
 
 <script src="frontend/scripts/main.js"></script>
