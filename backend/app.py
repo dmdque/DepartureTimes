@@ -135,29 +135,46 @@ def get_data():
     print request.query_string
     print request.url
     loc = Location(float(request.args.get('location[coords][latitude]')), float(request.args.get('location[coords][longitude]')))
+    # TODO: num_nearest = request...
+    num_nearest = 4 # default value
     closest = get_closest(loc, 4)
-    closest = closest[0]
 
-    # TODO: change url to abstracted layer, using constant base string and query string params
-    # TODO: do this for all n closest bus stops
-    bus_times = requests.get("http://webservices.nextbus.com/service/publicXMLFeed?command=predictions&a=sf-muni&stopId=" + str(closest.stopId)).content
-    xmldoc = minidom.parseString(bus_times)
-    itemlist = xmldoc.getElementsByTagName('prediction')
-    print(len(itemlist))
-    print(itemlist[0].attributes['seconds'].value)
-    str1 = ""
-    for s in itemlist:
-        print(s.attributes['seconds'].value)
-        str1 += str(s.attributes['seconds'].value) + "\n"
+    closest_stops_json = []
+    for bus_stop in closest:
+        stop_times = requests.get("http://webservices.nextbus.com/service/publicXMLFeed?command=predictions&a=sf-muni&stopId=" + str(bus_stop.stopId)).content
+        result = xmltodict.parse(stop_times)
+        bus_stop_data_json = json.dumps (result)
+        closest_stops_json += [bus_stop_data_json]
+        print "hi"
 
-    #xl = file('test.xml')
-    #xl = minidom.parseString(bus_times)
-    result = xmltodict.parse(bus_times)
-    data_json = json.dumps (result)
-    return data_json
+    # note that we will have a jsonified array of json strings for the frontend to parse
+    ret = json.dumps(closest_stops_json)
+    print ret
+    return ret
+
+    #closest = closest[0]
+
+    ## TODO: change url to abstracted layer, using constant base string and query string params
+
+    ## TODO: do this for all n closest bus stops
+    #bus_times = requests.get("http://webservices.nextbus.com/service/publicXMLFeed?command=predictions&a=sf-muni&stopId=" + str(closest.stopId)).content
+    #xmldoc = minidom.parseString(bus_times)
+    #itemlist = xmldoc.getElementsByTagName('prediction')
+    #print(len(itemlist))
+    #print(itemlist[0].attributes['seconds'].value)
+    #str1 = ""
+    #for s in itemlist:
+        #print(s.attributes['seconds'].value)
+        #str1 += str(s.attributes['seconds'].value) + "\n"
+
+    ##xl = file('test.xml')
+    ##xl = minidom.parseString(bus_times)
+    #result = xmltodict.parse(bus_times)
+    #data_json = json.dumps (result)
+    #return data_json
 
 
-    return str1
+    #return str1
 
 def get_closest(loc, n):
     closest = closestNStops(stops, loc, n)

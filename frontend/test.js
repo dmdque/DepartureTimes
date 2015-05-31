@@ -30,24 +30,90 @@ var getDepartureTimes = function () {
         data: data,
         context: document.body
     }).done(function(data) {
-        console.log("done")
-        console.log(data)
-        var bus_data = JSON.parse(data)
-        var prediction_data = bus_data.body.predictions.direction.prediction
-        console.log(bus_data)
+        var data_list_json = JSON.parse(data)
+        console.log(data_list_json)
+        var bus_data_list = _.map(data_list_json, function (bus_data) {
+            return JSON.parse(bus_data)
+        })
+        _.each(bus_data_list, function (bus_data) {
+        })
 
-        var bus_stop_times = _.pluck(prediction_data, "@seconds")
+        console.log(_.map(bus_data_list, function (bus_data) { return bus_data.body.predictions }))
+        var prediction_data_list = _.map(bus_data_list, function (bus_data) {
+            // special case when there is only one prediction
+            if (bus_data && bus_data.body && bus_data.body.predictions && bus_data.body.predictions.direction && bus_data.body.predictions.direction.prediction) {
+                var micro = {
+                    agencyTitle: bus_data.body.predictions["@agencyTitle"],
+                    routeTitle: bus_data.body.predictions["@routeTitle"],
+                    stopTag: bus_data.body.predictions["@stopTag"],
+                    stopTitle: bus_data.body.predictions["@stopTitle"],
+                    direction: bus_data.body.predictions.direction["@title"],
+                    epochTime: bus_data.body.predictions.direction.prediction["@epochTime"],
+                    seconds: prediction.direction.prediction["@seconds"]
+                }
+                return [micro]
+            } else if (bus_data.body.predictions.constructor === Array){
+                var preds = [] // TODO: rename
+                _.each(bus_data.body.predictions, function (prediction) {
+                    if (prediction.direction == undefined) {
+                        // TODO: handle or get rid
+                    } else if (prediction.direction.prediction.constructor === Array) { // not undefined
+                        _.each(prediction.direction.prediction, function (prediction2) {
+                            console.log("prediction2", prediction2)
+                            var micro = {
+                                // TODO: should these have title in them?
+                                agencyTitle: prediction["@agencyTitle"],
+                                routeTitle: prediction["@routeTitle"],
+                                stopTag: prediction["@stopTag"],
+                                stopTitle: prediction["@stopTitle"],
+                                direction: prediction.direction["@title"],
+                                epochTime: prediction2["@epochTime"],
+                                seconds: prediction2["@seconds"]
+                            }
+                            preds.push(micro)
+                        })
+                    } else { // if (prediction.direction && prediction.direction["@epochTime"]) {
+                        console.log("other")
+                        var micro = {
+                            // TODO: should these have title in them?
+                            agencyTitle: prediction["@agencyTitle"],
+                            routeTitle: prediction["@routeTitle"],
+                            stopTag: prediction["@stopTag"],
+                            stopTitle: prediction["@stopTitle"],
+                            direction: prediction.direction["@title"],
+                            epochTime: prediction.direction.prediction["@epochTime"],
+                            seconds: prediction.direction.prediction["@seconds"]
+                        }
+                        // TODO: remove this debugging
+                        if (micro.seconds == undefined) {
+                            debugger
+                        }
+                        preds.push(micro)
+                    }
+                })
+                return preds
+            } else {
+                // TODO: handle when no directions
+            }
+        })
+        console.log(prediction_data_list)
 
-        var stop_model = new Test.Models.BusStop({title: "test123", predictions: bus_stop_times})
-        var stop_model2 = new Test.Models.BusStop({title: "test123", predictions: bus_stop_times})
-        //stop_view = new Test.Views.BusStop({model: stop_model})
-        //$("#test").append(stop_view.render().el);
-        var models = []
-        models.push(stop_model)
-        models.push(stop_model2)
-
-        console.log("models", models)
-        var stops_collection = new Test.Collections.BusStops(models)
+        var stop_models = []
+        // TODO: sort each prediction_data
+        // TODO: sort collection based on nearest time
+        _.map(prediction_data_list, function (prediction_data) {
+            var stopTitle = ""
+            var stopTag = null
+            if (prediction_data && prediction_data[0] && prediction_data[0].stopTitle) {
+                stopTitle = prediction_data[0].stopTitle
+            }
+            if (prediction_data && prediction_data[0] && prediction_data[0].stopTag) {
+                stopTag = prediction_data[0].stopTag
+            }
+            var stop_model = new Test.Models.BusStop({"title": stopTitle, "predictions": prediction_data, "stopTag": stopTag})
+            stop_models.push(stop_model)
+        })
+        var stops_collection = new Test.Collections.BusStops(stop_models)
         var stops_view = new Test.Views.BusStops({collection: stops_collection})
         $("#test").append(stops_view.render().el);
     });
