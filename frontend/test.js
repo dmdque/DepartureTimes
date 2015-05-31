@@ -40,20 +40,8 @@ var getDepartureTimes = function () {
 
         console.log(_.map(bus_data_list, function (bus_data) { return bus_data.body.predictions }))
         var prediction_data_list = _.map(bus_data_list, function (bus_data) {
-            // special case when there is only one prediction
-            if (bus_data && bus_data.body && bus_data.body.predictions && bus_data.body.predictions.direction && bus_data.body.predictions.direction.prediction) {
-                var micro = {
-                    agencyTitle: bus_data.body.predictions["@agencyTitle"],
-                    routeTitle: bus_data.body.predictions["@routeTitle"],
-                    stopTag: bus_data.body.predictions["@stopTag"],
-                    stopTitle: bus_data.body.predictions["@stopTitle"],
-                    direction: bus_data.body.predictions.direction["@title"],
-                    epochTime: bus_data.body.predictions.direction.prediction["@epochTime"],
-                    seconds: prediction.direction.prediction["@seconds"]
-                }
-                return [micro]
-            } else if (bus_data.body.predictions.constructor === Array){
-                var preds = [] // TODO: rename
+            var preds = [] // TODO: rename
+            if (bus_data.body.predictions.constructor === Array) {
                 _.each(bus_data.body.predictions, function (prediction) {
                     if (prediction.direction == undefined) {
                         // TODO: handle or get rid
@@ -71,27 +59,74 @@ var getDepartureTimes = function () {
                                 seconds: prediction2["@seconds"]
                             }
                             preds.push(micro)
+                            if (micro.seconds == undefined || micro.agencyTitle == undefined) { debugger }
                         })
                     } else { // if (prediction.direction && prediction.direction["@epochTime"]) {
-                        console.log("other")
-                        var micro = {
-                            // TODO: should these have title in them?
-                            agencyTitle: prediction["@agencyTitle"],
-                            routeTitle: prediction["@routeTitle"],
-                            stopTag: prediction["@stopTag"],
-                            stopTitle: prediction["@stopTitle"],
-                            direction: prediction.direction["@title"],
-                            epochTime: prediction.direction.prediction["@epochTime"],
-                            seconds: prediction.direction.prediction["@seconds"]
+                        if (prediction.direction.prediction.constructor === Array) {
+                            _.each(prediction.direction.prediction, function (prediction2) {
+                                var micro = {
+                                    // TODO: should these have title in them?
+                                    agencyTitle: prediction["@agencyTitle"],
+                                    routeTitle: prediction["@routeTitle"],
+                                    stopTag: prediction["@stopTag"],
+                                    stopTitle: prediction["@stopTitle"],
+                                    direction: prediction.direction["@title"],
+                                    epochTime: prediction2["@epochTime"],
+                                    seconds: prediction2["@seconds"]
+                                }
+                                preds.push(micro)
+                                // TODO: remove this debugging
+                            if (micro.seconds == undefined || micro.agencyTitle == undefined) { debugger }
+                            })
+                        } else {
+                            var micro = {
+                                // TODO: should these have title in them?
+                                agencyTitle: prediction["@agencyTitle"],
+                                routeTitle: prediction["@routeTitle"],
+                                stopTag: prediction["@stopTag"],
+                                stopTitle: prediction["@stopTitle"],
+                                direction: prediction.direction["@title"],
+                                epochTime: prediction.direction.prediction["@epochTime"],
+                                seconds: prediction.direction.prediction["@seconds"]
+                            }
+                            preds.push(micro)
+                            // TODO: remove this debugging
+                            if (micro.seconds == undefined || micro.agencyTitle == undefined) { debugger }
                         }
-                        // TODO: remove this debugging
-                        if (micro.seconds == undefined) {
-                            debugger
-                        }
-                        preds.push(micro)
                     }
                 })
                 return preds
+            // special case when there is only one prediction
+            } else if (bus_data && bus_data.body && bus_data.body.predictions && bus_data.body.predictions.direction && bus_data.body.predictions.direction.prediction) {
+                if (bus_data.body.predictions.direction.prediction.constructor === Array) {
+                    _.each(bus_data.body.predictions.direction.prediction, function (prediction2) {
+                        var micro = {
+                            // TODO: should these have title in them?
+                            agencyTitle: bus_data.body.predictions["@agencyTitle"], routeTitle: bus_data.body.predictions.direction.prediction["@routeTitle"],
+                            stopTag: bus_data.body.predictions["@stopTag"],
+                            stopTitle: bus_data.body.predictions["@stopTitle"],
+                            direction: bus_data.body.predictions.direction["@title"],
+                            epochTime: prediction2["@epochTime"],
+                            seconds: prediction2["@seconds"]
+                        }
+                        preds.push(micro)
+                        // TODO: remove this debugging
+                        if (micro.seconds == undefined || micro.agencyTitle == undefined) { debugger }
+                    })
+                    return preds
+                } else {
+                    var micro = {
+                        agencyTitle: bus_data.body.predictions["@agencyTitle"],
+                        routeTitle: bus_data.body.predictions["@routeTitle"],
+                        stopTag: bus_data.body.predictions["@stopTag"],
+                        stopTitle: bus_data.body.predictions["@stopTitle"],
+                        direction: bus_data.body.predictions.direction["@title"],
+                        epochTime: bus_data.body.predictions.direction.prediction["@epochTime"],
+                        seconds: bus_data.body.predictions.direction.prediction["@seconds"]
+                    }
+                    if (micro.seconds == undefined || micro.agencyTitle == undefined) { debugger }
+                    return [micro]
+                }
             } else {
                 // TODO: handle when no directions
             }
