@@ -1,0 +1,20 @@
+{
+  "name": "DepartureTimes",
+  "version": "0.0.0",
+  "authors": [
+    "Daniel Que <dmdque@gmail.com>"
+  ],
+  "license": "MIT",
+  "private": true,
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "test",
+    "tests"
+  ],
+  "dependencies": {
+    "backbone": "~1.2.0",
+    "jquery": "~2.1.4"
+  }
+}
