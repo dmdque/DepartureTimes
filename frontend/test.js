@@ -7,7 +7,7 @@ var data = {
             "longitude": -122.39492
         }
     },
-    "test": "tests"
+    "num_nearest": 5
 }
 var bus_data
 var getDepartureTimes = function () {
@@ -81,12 +81,14 @@ var getDepartureTimes = function () {
                         }
                     }
                 }
-                if (predictions.constructor === Array) {
-                    _.each(predictions, function (prediction) {
-                        handle_prediction(prediction)
-                    })
-                } else {
-                    handle_prediction(prediction)
+                if (predictions !== undefined) {
+                    if (predictions.constructor === Array) {
+                        _.each(predictions, function (prediction) {
+                            handle_prediction(prediction)
+                        })
+                    } else {
+                        handle_prediction(predictions)
+                    }
                 }
             }
             handle_predictions(bus_data.body.predictions)
@@ -100,6 +102,7 @@ var getDepartureTimes = function () {
         _.map(prediction_data_list, function (prediction_data) {
             var stopTitle = ""
             var stopTag = null
+            var direction = null
             if (prediction_data && prediction_data[0] && prediction_data[0].stopTitle) {
                 stopTitle = prediction_data[0].stopTitle
             }

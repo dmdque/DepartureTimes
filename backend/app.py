@@ -7,6 +7,13 @@ from flask import Flask, jsonify, render_template, request #is this the same req
 import json
 import xmltodict
 import inspect
+import sqlite3
+
+DATABASE = '/tmp/flaskr.db'
+DEBUG = True
+SECRET_KEY = 'development key'
+USERNAME = 'admin'
+PASSWORD = 'default'
 
 app = Flask(__name__, static_folder = "../frontend")
 
@@ -19,17 +26,21 @@ class Location:
         self.lon    = lon
 
 class Stop:
-    tag    = None
-    title  = None
-    lat    = None
-    lon    = None
-    stopId = None
-    def __init__(self, tag, title, lat, lon, stopId):
-        self.tag    = tag
-        self.title  = title
-        self.lat    = lat
-        self.lon    = lon
-        self.stopId = stopId
+    stopTag  = None
+    title    = None
+    lat      = None
+    lon      = None
+    stopId   = None
+    routeTag = None
+    agency   = None
+    def __init__(self, stopTag, title, lat, lon, stopId, routeTag, agency):
+        self.stopTag      = stopTag
+        self.title    = title
+        self.lat      = lat
+        self.lon      = lon
+        self.stopId   = stopId
+        self.routeTag = routeTag
+        self.agency   = agency
 
 all_stops = []
 
@@ -136,9 +147,8 @@ def get_data():
     print request.query_string
     print request.url
     loc = Location(float(request.args.get('location[coords][latitude]')), float(request.args.get('location[coords][longitude]')))
-    # TODO: num_nearest = request...
-    num_nearest = 4 # default value
-    closest = get_closest(loc, 4)
+    num_nearest = int(request.args.get('num_nearest'))
+    closest = get_closest(loc, num_nearest)
 
     closest_stops_json = []
     for bus_stop in closest:
@@ -186,11 +196,17 @@ def get_closest(loc, n):
 # single route for now
 # TODO: specify the route in query params
 @app.route("/get-route")
-def get_route():
+def get_route_wrapper():
+    routeTag = "54" # TODO: this is temporary
+    get_route(routeTag)
+
+def get_route(routeTag):
     global all_stops
-    route_stops = requests.get("http://webservices.nextbus.com/service/publicXMLFeed?command=routeConfig&a=ttc&r=" + "54").content
+    route_stops = requests.get("http://webservices.nextbus.com/service/publicXMLFeed?command=routeConfig&a=ttc&r=" + routeTag).content
     route_stops_dict = xmltodict.parse(route_stops)
     stops = []
+    #print route_stops_dict
+    #print route_stops_dict["body"]
     for stop in route_stops_dict["body"]["route"]["stop"]:
         if "@stopId" in stop:
             stops.append(Stop(stop["@tag"], stop["@title"], float(stop["@lat"]), float(stop["@lon"]), stop["@stopId"]))
@@ -198,6 +214,21 @@ def get_route():
 
     route_stops_json = json.dumps (route_stops_dict)
     return route_stops_json
+
+# TODO: specify agency
+@app.route("/get-routes")
+def get_routes():
+    routes = requests.get("http://webservices.nextbus.com/service/publicXMLFeed?command=routeList&a=ttc").content
+    routes_dict = xmltodict.parse(routes)
+    #print inspect.getmembers(routes_dict["body"], lambda a:not(inspect.isroutine(a)))
+    i = 0
+    for route in routes_dict["body"]["route"]:
+        if i > 5:
+            break
+        get_route(route["@tag"])
+        print i
+        i += 1
+    return "hi"
 
 
 @app.route("/")
