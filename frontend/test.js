@@ -1,5 +1,4 @@
 var x = document.getElementById("demo");
-console.log("hello world")
 var data = {
     "location": {
         "coords": {
@@ -11,9 +10,7 @@ var data = {
 }
 var bus_data
 var getDepartureTimes = function () {
-    console.log("getDepartureTimes")
     if ($("input[name='custom_location']").is(":checked")) {
-        console.log("custom")
         custom_location = {
             "coords": {
                 "latitude": $("input#lat").val(),
@@ -51,6 +48,7 @@ var getDepartureTimes = function () {
                             var micro = {
                                 // TODO: should these have title in them?
                                 agencyTitle: prediction["@agencyTitle"],
+                                routeTag: prediction["@routeTag"],
                                 routeTitle: prediction["@routeTitle"],
                                 stopTag: prediction["@stopTag"],
                                 stopTitle: prediction["@stopTitle"],
@@ -62,7 +60,7 @@ var getDepartureTimes = function () {
                             // TODO: remove this debugging
                             if (micro.seconds == undefined || micro.agencyTitle == undefined) { debugger }
                         }
-                        if (prediction.direction !== undefined) { // not sure if this one is needed
+                        if (direction.prediction !== undefined) { // not sure if this one is needed
                             if (direction.prediction.constructor === Array) {
                                 _.each(direction.prediction, function (prediction2) {
                                     handle_prediction2(prediction2)
@@ -79,6 +77,19 @@ var getDepartureTimes = function () {
                             })
                         } else {
                             handle_direction(prediction.direction)
+                        }
+                    } else {
+                        // this creates a placeholder prediction, for when a bus
+                        // stop has no predictions
+                        if (predictions.constructor !== Array) {
+                            var micro = {
+                                agencyTitle: prediction["@agencyTitle"],
+                                routeTag: prediction["@routeTag"],
+                                routeTitle: prediction["@routeTitle"],
+                                stopTag: prediction["@stopTag"],
+                                stopTitle: prediction["@stopTitle"]
+                            }
+                            preds.push(micro)
                         }
                     }
                 }
@@ -102,8 +113,9 @@ var getDepartureTimes = function () {
         // TODO: sort collection based on nearest time
         _.map(prediction_data_list, function (prediction_data) {
             var stopTitle = ""
-            var stopTag = null
             var direction = null
+            var stopTag = null
+            var routeTitle = null
             if (prediction_data && prediction_data[0] && prediction_data[0].stopTitle) {
                 stopTitle = prediction_data[0].stopTitle
             }
@@ -113,11 +125,19 @@ var getDepartureTimes = function () {
             if (prediction_data && prediction_data[0] && prediction_data[0].direction) {
                 direction = prediction_data[0].direction
             }
+            if (prediction_data && prediction_data[0] && prediction_data[0].routeTag) {
+                routeTag = prediction_data[0].routeTag
+            }
+            if (prediction_data && prediction_data[0] && prediction_data[0].routeTitle) {
+                routeTitle = prediction_data[0].routeTitle
+            }
             var stop_model = new Test.Models.BusStop({
                 "title": stopTitle,
                 "predictions": prediction_data,
                 "direction": direction,
-                "stopTag": stopTag
+                "stopTag": stopTag,
+                "routeTag": routeTag,
+                "routeTitle": routeTitle
             })
             stop_models.push(stop_model)
         })
@@ -138,7 +158,6 @@ function showPosition(position) {
     lat = position.coords.latitude;
     lon = position.coords.longitude;
 
-    console.log("lat and lon: ", lat, lon, position)
     latlon = new google.maps.LatLng(lat, lon)
     mapholder = document.getElementById('mapholder')
     mapholder.style.height = '250px';

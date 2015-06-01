@@ -18,7 +18,8 @@ Test.Models = Test.Models || {};
             coords: {latitude: null, longitude: null},
             tag: "",
             stopId: "",
-            route: ""
+            routeTag: "",
+            routeTitle: ""
         },
 
         validate: function(attrs, options) {
