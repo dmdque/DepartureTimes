@@ -101,10 +101,13 @@ def get_closest():
     )
     num_nearest = int(request.args.get('num_nearest'))
 
+    if all_stops == 0:
+        load_db()
+
     closest = closest_n_stops(all_stops, loc, num_nearest)
     closest_stops_json = []
     for bus_stop in closest:
-        stop_time = query_stop_api(bus_stop.agency, bus_stop.routeTag, bus_stop.stopTag)
+        stop_times = query_stop_api(bus_stop.agency, bus_stop.routeTag, bus_stop.stopTag)
         result = xmltodict.parse(stop_times)
         bus_stop_data_json = json.dumps(result)
         closest_stops_json += [bus_stop_data_json]
