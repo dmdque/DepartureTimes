@@ -325,13 +325,16 @@ def get_route(routeTag, agency):
     return route_stops_json
 
 @app.route("/get-routes")
-def get_routes():
+def get_routes_wrapper():
     # TODO: specify agency
     #request.args.get('agency')
     global agency
+    get_routes(agency)
+
+# mutates
+def get_routes(agency):
     routes = requests.get("http://webservices.nextbus.com/service/publicXMLFeed?command=routeList&a=" + agency).content
     routes_dict = xmltodict.parse(routes)
-    #print inspect.getmembers(routes_dict["body"], lambda a:not(inspect.isroutine(a)))
     i = 0
     for route in routes_dict["body"]["route"]:
         #if i > 5:
@@ -341,6 +344,18 @@ def get_routes():
         i += 1
     return "hi"
 
+def get_all_agency_routes(agencies):
+    for agency in agencies:
+        get_routes(agency)
+
+def refresh_db():
+    global all_stops
+    init_db()
+    all_stops = []
+    agencies = ["sf-muni", "actransit", "sf-mission-bay", "unitrans", "ucsf", "dumbarton", "emery"]
+    get_all_agency_routes(agencies)
+    store_all_stops(all_stops)
+    print len(all_stops)
 
 @app.route("/")
 def show_todos():
@@ -350,15 +365,11 @@ def show_todos():
 if __name__ == "__main__":
     app.debug = True
     #setup first time
-    #init_db()
-    #all_stops = []
-    #get_routes()
-    #store_all_stops(all_stops)
+    #refresh_db()
     #setupend
 
     all_stops = []
     all_stops = load_all_stops()
 
-    print len(all_stops)
     app.run()
 
