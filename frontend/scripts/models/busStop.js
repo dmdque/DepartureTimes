@@ -3,31 +3,31 @@
 Test.Models = Test.Models || {};
 
 (function () {
-    'use strict';
+  'use strict';
 
-    Test.Models.BusStop = Backbone.Model.extend({
+  Test.Models.BusStop = Backbone.Model.extend({
 
-        url: '',
+    url: '',
 
-        initialize: function() {
-        },
+    initialize: function() {
+    },
 
-        defaults: {
-            title: "",
-            predictions: [],
-            coords: {latitude: null, longitude: null},
-            tag: "",
-            stopId: "",
-            routeTag: "",
-            routeTitle: ""
-        },
+    defaults: {
+      title: "",
+      predictions: [],
+      coords: {latitude: null, longitude: null},
+      tag: "",
+      stopId: "",
+      routeTag: "",
+      routeTitle: ""
+    },
 
-        validate: function(attrs, options) {
-        },
+    validate: function(attrs, options) {
+    },
 
-        parse: function(response, options)  {
-            return response;
-        }
-    });
+    parse: function(response, options) {
+      return response;
+    }
+  });
 
 })();

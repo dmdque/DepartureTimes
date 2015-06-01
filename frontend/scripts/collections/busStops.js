@@ -3,12 +3,12 @@
 Test.Collections = Test.Collections || {};
 
 (function () {
-    'use strict';
+  'use strict';
 
-    Test.Collections.BusStops = Backbone.Collection.extend({
+  Test.Collections.BusStops = Backbone.Collection.extend({
 
-        model: Test.Models.BusStop
+    model: Test.Models.BusStop
 
-    });
+  });
 
 })();
