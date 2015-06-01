@@ -175,16 +175,16 @@ def refresh_db():
     print len(all_stops)
 
 @app.route("/")
-def show_todos():
-    return render_template('departure-times.html')
+def get_index():
+    return render_template('index.html')
 
-@app.route("/load-db")
+# None => None
+# loads all stops from database and stores it in all_stops
 def load_db():
     global all_stops
     all_stops = []
     all_stops = load_all_stops()
     print len(all_stops)
-    return "complete"
 
 if __name__ == "__main__":
     app.debug = True
