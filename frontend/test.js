@@ -43,6 +43,7 @@ var getDepartureTimes = function () {
         console.log(_.map(bus_data_list, function (bus_data) { return bus_data.body.predictions }))
         var prediction_data_list = _.map(bus_data_list, function (bus_data) {
             var preds = [] // TODO: rename
+            // TODO* handle case where there are no directions by displaying route info and no times
             var handle_predictions = function (predictions) {
                 var handle_prediction = function (prediction) {
                     var handle_direction = function (direction) {
