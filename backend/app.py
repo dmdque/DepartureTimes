@@ -9,9 +9,11 @@ import xmltodict
 import inspect
 import sqlite3
 from contextlib import closing
+import os
 
 # TODO: move this to separate file
-DATABASE = '/tmp/deptimes.db'
+#DATABASE = '/tmp/deptimes.db'
+DATABASE = '/app/backend/deptimes.northern-cali.db'
 DEBUG = True
 SECRET_KEY = 'development key'
 USERNAME = 'admin'
@@ -375,5 +377,6 @@ if __name__ == "__main__":
     #setupend
 
     all_stops = []
-    app.run()
+    port = int(os.environ.get('PORT', 5000))
+    app.run(host='0.0.0.0', port=port)
 
