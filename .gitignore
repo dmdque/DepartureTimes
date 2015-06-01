@@ -2,3 +2,4 @@ node_modules/
 bower_components/
 
 .*.sw?
+flask_env
