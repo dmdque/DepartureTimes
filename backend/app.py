@@ -361,6 +361,12 @@ def refresh_db():
 def show_todos():
     return render_template('departure-times.html')
 
+@app.route("/load-db")
+def load_db():
+    global all_stops
+    all_stops = []
+    all_stops = load_all_stops()
+    return "complete"
 
 if __name__ == "__main__":
     app.debug = True
@@ -369,7 +375,5 @@ if __name__ == "__main__":
     #setupend
 
     all_stops = []
-    all_stops = load_all_stops()
-
     app.run()
 
