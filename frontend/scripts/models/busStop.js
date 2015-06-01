@@ -19,7 +19,8 @@ Test.Models = Test.Models || {};
       tag: "",
       stopId: "",
       routeTag: "",
-      routeTitle: ""
+      routeTitle: "",
+      agencyTitle: ""
     },
 
     validate: function(attrs, options) {

@@ -116,6 +116,7 @@ var getDepartureTimes = function () {
       var direction = null
       var stopTag = null
       var routeTitle = null
+      var agencyTitle = ""
       if (prediction_data && prediction_data[0] && prediction_data[0].stopTitle) {
         stopTitle = prediction_data[0].stopTitle
       }
@@ -131,13 +132,17 @@ var getDepartureTimes = function () {
       if (prediction_data && prediction_data[0] && prediction_data[0].routeTitle) {
         routeTitle = prediction_data[0].routeTitle
       }
+      if (prediction_data && prediction_data[0] && prediction_data[0].agencyTitle) {
+        agencyTitle = prediction_data[0].agencyTitle
+      }
       var stop_model = new Test.Models.BusStop({
         "title": stopTitle,
         "predictions": prediction_data,
         "direction": direction,
         "stopTag": stopTag,
         "routeTag": routeTag,
-        "routeTitle": routeTitle
+        "routeTitle": routeTitle,
+        "agencyTitle": agencyTitle
       })
       stop_models.push(stop_model)
     })
