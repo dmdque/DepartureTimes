@@ -2,13 +2,15 @@ var x = document.getElementById("demo");
 var data = {
   "location": {
     "coords": {
-      "latitude": 40.7944499,
-      "longitude": -122.39492
+      "latitude": 37.791028,
+      "longitude": -122.393375
     }
   },
-  "num_nearest": 5
+  "num_nearest": 20
 }
 var bus_data
+// TODO: not global
+all_models = []
 var getDepartureTimes = function () {
   if ($("input[name='custom_location']").is(":checked")) {
     custom_location = {
@@ -18,9 +20,9 @@ var getDepartureTimes = function () {
       }
     }
     data.location = custom_location
-    showPosition(custom_location)
+    //showPosition(custom_location)
   } else {
-    getLocation()
+    //getLocation()
   }
 
   $.ajax({
@@ -33,13 +35,25 @@ var getDepartureTimes = function () {
     var bus_data_list = _.map(data_list_json, function (bus_data) {
       return JSON.parse(bus_data)
     })
+    bus_stops = {}
     _.each(bus_data_list, function (bus_data) {
+      bus_stops[bus_data.body.stopId] = {
+        agencyTitle: bus_data.body.predictions["@agencyTitle"],
+        stopTitle: bus_data.body.predictions["@stopTitle"],
+        coords: {
+          latitude: bus_data.body.lat,
+          longitude: bus_data.body.lon,
+        },
+        stopId: bus_data.body.stopId,
+        predictions: []
+      }
+      console.log("iddd", bus_data.body.stopId)
     })
+    console.log("bus_stops: ", bus_stops)
     console.log(bus_data_list)
 
     console.log(_.map(bus_data_list, function (bus_data) { return bus_data.body.predictions }))
-    var prediction_data_list = _.map(bus_data_list, function (bus_data) {
-      var preds = [] // TODO: rename
+    _.map(bus_data_list, function (bus_data) {
       // TODO* handle case where there are no directions by displaying route info and no times
       var handle_predictions = function (predictions) {
         var handle_prediction = function (prediction) {
@@ -47,18 +61,16 @@ var getDepartureTimes = function () {
             var handle_prediction2 = function (prediction2) {
               var micro = {
                 // TODO: should these have title in them?
-                agencyTitle: prediction["@agencyTitle"],
                 routeTag: prediction["@routeTag"],
                 routeTitle: prediction["@routeTitle"],
                 stopTag: prediction["@stopTag"],
-                stopTitle: prediction["@stopTitle"],
                 direction: direction["@title"],
                 epochTime: prediction2["@epochTime"],
                 seconds: prediction2["@seconds"]
               }
-              preds.push(micro)
+              bus_stops[bus_data.body.stopId].predictions.push(micro)
               // TODO: remove this debugging
-              if (micro.seconds == undefined || micro.agencyTitle == undefined) { debugger }
+              if (micro.seconds == undefined || micro.routeTitle == undefined) { debugger }
             }
             if (direction.prediction !== undefined) { // not sure if this one is needed
               if (direction.prediction.constructor === Array) {
@@ -83,16 +95,15 @@ var getDepartureTimes = function () {
             // stop has no predictions
             if (predictions.constructor !== Array) {
               var micro = {
-                agencyTitle: prediction["@agencyTitle"],
                 routeTag: prediction["@routeTag"],
                 routeTitle: prediction["@routeTitle"],
-                stopTag: prediction["@stopTag"],
-                stopTitle: prediction["@stopTitle"]
+                stopTag: prediction["@stopTag"]
               }
-              preds.push(micro)
+              bus_stops[bus_data.body.stopId].predictions.push(micro)
             }
           }
         }
+        // note that this case rarely occurs, if ever
         if (predictions !== undefined) {
           if (predictions.constructor === Array) {
             _.each(predictions, function (prediction) {
@@ -104,51 +115,31 @@ var getDepartureTimes = function () {
         }
       }
       handle_predictions(bus_data.body.predictions)
-      return preds
     })
-    console.log(prediction_data_list)
+    console.log(bus_stops)
 
-    var stop_models = []
-    // TODO: sort each prediction_data
+    // TODO: sort each bus_stop.predictions
     // TODO: sort collection based on nearest time
-    _.map(prediction_data_list, function (prediction_data) {
-      var stopTitle = ""
-      var direction = null
-      var stopTag = null
-      var routeTitle = null
-      var agencyTitle = ""
-      if (prediction_data && prediction_data[0] && prediction_data[0].stopTitle) {
-        stopTitle = prediction_data[0].stopTitle
-      }
-      if (prediction_data && prediction_data[0] && prediction_data[0].stopTag) {
-        stopTag = prediction_data[0].stopTag
-      }
-      if (prediction_data && prediction_data[0] && prediction_data[0].direction) {
-        direction = prediction_data[0].direction
-      }
-      if (prediction_data && prediction_data[0] && prediction_data[0].routeTag) {
-        routeTag = prediction_data[0].routeTag
-      }
-      if (prediction_data && prediction_data[0] && prediction_data[0].routeTitle) {
-        routeTitle = prediction_data[0].routeTitle
-      }
-      if (prediction_data && prediction_data[0] && prediction_data[0].agencyTitle) {
-        agencyTitle = prediction_data[0].agencyTitle
-      }
+    // TODO: this isn't that nice
+    var stop_models = []
+    _.each(bus_stops, function (bus_stop, key) {
+
       var stop_model = new Test.Models.BusStop({
-        "title": stopTitle,
-        "predictions": prediction_data,
-        "direction": direction,
-        "stopTag": stopTag,
-        "routeTag": routeTag,
-        "routeTitle": routeTitle,
-        "agencyTitle": agencyTitle
+        "agencyTitle": bus_stop.agencyTitle,
+        "stopTitle": bus_stop.stopTitle,
+        "predictions": bus_stop.predictions,
+        "stopId": bus_stop.stopId,
+        "coords": bus_stop.coords
       })
       stop_models.push(stop_model)
     })
+    all_models = stop_models
+    console.log("all_models", all_models)
     var stops_collection = new Test.Collections.BusStops(stop_models)
     var stops_view = new Test.Views.BusStops({collection: stops_collection})
     $("#test").append(stops_view.render().el);
+
+    showPosition(custom_location)
   });
 }
 function getLocation() {
@@ -164,33 +155,56 @@ function showPosition(position) {
   lon = position.coords.longitude;
 
   latlon = new google.maps.LatLng(lat, lon)
-  mapholder = document.getElementById('mapholder')
+  mapholder = document.getElementById('map-canvas')
   mapholder.style.height = '250px';
   mapholder.style.width = '500px';
 
-  var myOptions = {
-  center:latlon,zoom:14,
-  mapTypeId:google.maps.MapTypeId.ROADMAP,
-  mapTypeControl:false,
-  navigationControlOptions:{style:google.maps.NavigationControlStyle.SMALL}
+  var mapOptions = {
+    center:latlon,
+    zoom: 16,
+    mapTypeId: google.maps.MapTypeId.ROADMAP,
+    mapTypeControl:false,
+    navigationControlOptions:{style:google.maps.NavigationControlStyle.SMALL}
   }
 
-  var map = new google.maps.Map(document.getElementById("mapholder"), myOptions);
-  var marker = new google.maps.Marker({position:latlon,map:map,title:"You are here!"});
+  var map = new google.maps.Map(document.getElementById("map-canvas"), mapOptions);
 
-  var bus_position = {
-    "coords": {
-      "latitude": 37.79096,
-      "longitude": -122.4020799,
+  //_.each(all_models, function(model) {
+    //console.log("coords: ", model.get("coords").latitude, model.get("coords").longitude)
+    //console.log("coords: ", model)
+    //var circleOptions = {
+      //strokeColor: '#FF0000',
+      //strokeOpacity: 0.8,
+      //strokeWeight: 2,
+      //fillColor: '#FF0000',
+      //fillOpacity: 0.35,
+      //map: map,
+      //center: new google.maps.LatLng(
+        //model.get("coords").latitude,
+        //model.get("coords").longitude
+      //),
+      //radius: Math.sqrt(model.get("seconds")) * 1000
+    //};
+    //// Add the circle for this city to the map.
+    //console.log("adding circle")
+    //cityCircle = new google.maps.Circle(circleOptions);
+  //})
+
+  //var marker = new google.maps.Marker({position:latlon,map:map,title:"You are here!"});
+
+  _.each(all_models, function(model) {
+    if (Math.floor(model.get("predictions")[0].seconds)) {
+      var pos = new google.maps.LatLng(
+        model.get("coords").latitude,
+        model.get("coords").longitude
+      )
+      var infowindow = new google.maps.InfoWindow({
+        map: map,
+        position: pos,
+        content: model.get("stopId") + ": " + Math.floor(model.get("predictions")[0].seconds / 60) + " minutes"
+      });
     }
-  }
-  var pos = new google.maps.LatLng(bus_position.coords.latitude,
-                   bus_position.coords.longitude)
-  var infowindow = new google.maps.InfoWindow({
-    map: map,
-    pos: pos,
-    content: 'Bush St & Montgomery St'
-  });
+  })
 
 }
 

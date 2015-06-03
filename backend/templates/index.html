@@ -48,7 +48,7 @@
   </div>
   <div class="row">
     <div class="col-md-6">
-      <div id="mapholder"></div>
+      <div id="map-canvas"></div>
     </div>
   </div>
   <div id="closest_busses"></div>
@@ -69,36 +69,35 @@
     <thead>
       <tr>
         <th>#</th>
-        <th>Bus Title</th>
         <th>Agency</th>
-        <th>Route</th>
-        <th>Direction</th>
+        <th>Bus Title</th>
         <th>Prediction</th>
       </tr>
     </thead>
     <tbody>
       <% _.each(collection, function(model) { %>
         <tr>
-          <td><%= model.stopTag %></td>
-          <td><%= model.title %></td>
+          <td><%= model.stopId %></td>
           <td><%= model.agencyTitle %></td>
-          <td><%= model.routeTag %></td>
-          <td><%= model.direction %></td>
+          <td><%= model.stopTitle %></td>
 
           <td>
-          <% var comma_flag = false %>
-          <% _.each(model.predictions, function(prediction) { %>
-            <% if (comma_flag) { %>
-              <span>, </span>
-            <% } else { %>
-              <% comma_flag = true %>
-            <% } %>
-            <% if (prediction.seconds === undefined) { %>
+          <% if (_.every(model.predictions, function(prediction) { return prediction.seconds === undefined} )) { %>
               <span>There are no predictions for this bus stop.</span>
-            <% } else { %>
-              <%= Math.trunc(prediction.seconds / 60) %>:<%= prediction.seconds % 60 %>
-            <% } %>
-          <% }); %>
+          <% } else { %>
+            <% var comma_flag = false %>
+            <% _.each(model.predictions, function(prediction) { %>
+              <% if (prediction.seconds === undefined) { %>
+              <% } else { %>
+                <% if (comma_flag) { %>
+                  <span>, </span>
+                <% } else { %>
+                  <% comma_flag = true %>
+                <% } %>
+                <%= Math.trunc(prediction.seconds / 60) %>:<%= prediction.seconds % 60 %>
+              <% } %>
+            <% }); %>
+          <% } %>
           </td>
         </tr>
       <% }); %>

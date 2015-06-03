@@ -13,14 +13,11 @@ Test.Models = Test.Models || {};
     },
 
     defaults: {
-      title: "",
+      agencyTitle: "",
+      stopTitle: "",
       predictions: [],
       coords: {latitude: null, longitude: null},
-      tag: "",
       stopId: "",
-      routeTag: "",
-      routeTitle: "",
-      agencyTitle: ""
     },
 
     validate: function(attrs, options) {
