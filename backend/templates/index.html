@@ -49,6 +49,7 @@
   <div class="row">
     <div class="col-md-6">
       <div id="map-canvas"></div>
+      <div class="description">The size of circle indicates how soon the bus will arrive.</div>
     </div>
   </div>
   <div id="closest_busses"></div>
@@ -85,18 +86,17 @@
           <% if (_.every(model.predictions, function(prediction) { return prediction.seconds === undefined} )) { %>
               <span>There are no predictions for this bus stop.</span>
           <% } else { %>
-            <% var comma_flag = false %>
-            <% _.each(model.predictions, function(prediction) { %>
-              <% if (prediction.seconds === undefined) { %>
-              <% } else { %>
-                <% if (comma_flag) { %>
-                  <span>, </span>
+            <span>
+              <% var str = _.map(model.predictions, function (prediction) { %>
+                <% var time = Math.trunc(prediction.seconds / 60) %>
+                <% if (time < 1) { %>
+                  <% return "Now" %>
                 <% } else { %>
-                  <% comma_flag = true %>
+                  <% return time + "min"%>
                 <% } %>
-                <%= Math.trunc(prediction.seconds / 60) %>:<%= prediction.seconds % 60 %>
-              <% } %>
-            <% }); %>
+              <% }) %>
+              <%= str.join(", ") %>
+            </span>
           <% } %>
           </td>
         </tr>

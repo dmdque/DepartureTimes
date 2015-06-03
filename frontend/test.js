@@ -93,14 +93,14 @@ var getDepartureTimes = function () {
           } else {
             // this creates a placeholder prediction, for when a bus
             // stop has no predictions
-            if (predictions.constructor !== Array) {
-              var micro = {
-                routeTag: prediction["@routeTag"],
-                routeTitle: prediction["@routeTitle"],
-                stopTag: prediction["@stopTag"]
-              }
-              bus_stops[bus_data.body.stopId].predictions.push(micro)
-            }
+            //if (predictions.constructor !== Array) {
+              //var micro = {
+                //routeTag: prediction["@routeTag"],
+                //routeTitle: prediction["@routeTitle"],
+                //stopTag: prediction["@stopTag"]
+              //}
+              //bus_stops[bus_data.body.stopId].predictions.push(micro)
+            //}
           }
         }
         // note that this case rarely occurs, if ever
@@ -123,7 +123,16 @@ var getDepartureTimes = function () {
     // TODO: this isn't that nice
     var stop_models = []
     _.each(bus_stops, function (bus_stop, key) {
-
+      bus_stop.predictions.sort(function(a, b) {
+        if (a == undefined) {
+          console.log("yoyoyo")
+          return 1
+        }
+        if (b == undefined)
+          return -1
+        return parseInt(a.epochTime) - parseInt(b.epochTime)
+      })
+      console.log(_.map(bus_stop.predictions, function (p) { return parseInt(p.epochTime) }))
       var stop_model = new Test.Models.BusStop({
         "agencyTitle": bus_stop.agencyTitle,
         "stopTitle": bus_stop.stopTitle,
@@ -161,7 +170,7 @@ function showPosition(position) {
 
   var mapOptions = {
     center:latlon,
-    zoom: 16,
+    zoom: 17,
     mapTypeId: google.maps.MapTypeId.ROADMAP,
     mapTypeControl:false,
     navigationControlOptions:{style:google.maps.NavigationControlStyle.SMALL}
@@ -169,31 +178,36 @@ function showPosition(position) {
 
   var map = new google.maps.Map(document.getElementById("map-canvas"), mapOptions);
 
-  //_.each(all_models, function(model) {
-    //console.log("coords: ", model.get("coords").latitude, model.get("coords").longitude)
-    //console.log("coords: ", model)
-    //var circleOptions = {
-      //strokeColor: '#FF0000',
-      //strokeOpacity: 0.8,
-      //strokeWeight: 2,
-      //fillColor: '#FF0000',
-      //fillOpacity: 0.35,
-      //map: map,
-      //center: new google.maps.LatLng(
-        //model.get("coords").latitude,
-        //model.get("coords").longitude
-      //),
-      //radius: Math.sqrt(model.get("seconds")) * 1000
-    //};
-    //// Add the circle for this city to the map.
-    //console.log("adding circle")
-    //cityCircle = new google.maps.Circle(circleOptions);
-  //})
-
-  //var marker = new google.maps.Marker({position:latlon,map:map,title:"You are here!"});
+  var marker_threshold = 5 * 60 // 5 minutes
 
   _.each(all_models, function(model) {
-    if (Math.floor(model.get("predictions")[0].seconds)) {
+    if (model.get("predictions")[0] && model.get("predictions")[0].seconds && model.get("predictions")[0].seconds < marker_threshold) {
+      if (model.get("predictions").length > 0) {
+        var circleOptions = {
+          strokeColor: '#FF0000',
+          strokeOpacity: 0.8,
+          strokeWeight: 2,
+          fillColor: '#FF0000',
+          fillOpacity: 0.35,
+          map: map,
+          center: new google.maps.LatLng(
+            model.get("coords").latitude,
+            model.get("coords").longitude
+          ),
+          radius: (marker_threshold - model.get("predictions")[0].seconds) / 10 + 5
+        };
+        console.log((marker_threshold - model.get("predictions")[0].seconds) / 10 + 5)
+
+        // Add the circle for this city to the map.
+        cityCircle = new google.maps.Circle(circleOptions);
+      }
+    }
+  })
+
+  var marker = new google.maps.Marker({position:latlon,map:map,title:"You are here!"});
+
+  _.each(all_models, function(model) {
+    if (model.get("predictions")[0] && model.get("predictions")[0].seconds && model.get("predictions")[0].seconds < marker_threshold) {
       var pos = new google.maps.LatLng(
         model.get("coords").latitude,
         model.get("coords").longitude
@@ -201,7 +215,7 @@ function showPosition(position) {
       var infowindow = new google.maps.InfoWindow({
         map: map,
         position: pos,
-        content: model.get("stopId") + ": " + Math.floor(model.get("predictions")[0].seconds / 60) + " minutes"
+        content: Math.floor(model.get("predictions")[0].seconds / 60) + " min"
       });
     }
   })
