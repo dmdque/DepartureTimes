@@ -16,6 +16,7 @@ import sqlite3
 from contextlib import closing
 import os
 from scipy import spatial
+import time
 
 app = Flask(__name__, static_folder = "../frontend")
 
@@ -101,6 +102,10 @@ def closest_n_stops(stops, loc, n):
 def query_stop_api(agency, routeTag, stopTag):
     return requests.get('http://webservices.nextbus.com/service/publicXMLFeed?command=predictions&a=' + agency + '&r=' + routeTag + '&s=' + stopTag).content
 
+cache_limit = 100
+cache_stops = {} # stopId not sufficient
+cache_timeout = 5 * 60
+
 @app.route('/get-closest')
 def get_closest():
     global all_stops
@@ -114,17 +119,45 @@ def get_closest():
     if all_stops_kdtree == None:
         load_db()
 
+    print "num_nearest"
+    print num_nearest
     closest = closest_n_stops_kdtree(all_stops_kdtree, loc, num_nearest)
-    closest_stops_json = []
-    for bus_stop in closest:
-        stop_times = query_stop_api(bus_stop.agency, bus_stop.routeTag, bus_stop.stopTag)
-        result = xmltodict.parse(stop_times)
-        result["body"]["lat"] = bus_stop.lat
-        result["body"]["lon"] = bus_stop.lon
-        result["body"]["stopId"] = bus_stop.stopId
-        bus_stop_data_json = json.dumps(result)
-        closest_stops_json += [bus_stop_data_json]
 
+    def extract_stopId(bus_stop):
+        return [bus_stop.stopId, bus_stop.routeTag]
+    print map(extract_stopId, closest)
+
+    closest_stops_json = []
+    miss_count = 0 # for testing
+    print len(closest)
+    for bus_stop in closest:
+        time_now = time.time()
+        print bus_stop.stopId
+        if (bus_stop.stopTag + bus_stop.routeTag) in cache_stops and time_now - cache_stops[bus_stop.stopTag + bus_stop.routeTag]['cache_time'] < cache_timeout:
+            closest_stops_json += [cache_stops[bus_stop.stopTag + bus_stop.routeTag]['data']]
+            print time_now - cache_stops[bus_stop.stopTag + bus_stop.routeTag]['cache_time']
+        else:
+            if (bus_stop.stopTag + bus_stop.routeTag) in cache_stops:
+                print time_now - cache_stops[bus_stop.stopTag + bus_stop.routeTag]['cache_time']
+            miss_count += 1
+            cache_time = time.time()
+            stop_times = query_stop_api(bus_stop.agency, bus_stop.routeTag, bus_stop.stopTag)
+            result = xmltodict.parse(stop_times)
+            result["body"]["lat"] = bus_stop.lat
+            result["body"]["lon"] = bus_stop.lon
+            result["body"]["stopId"] = bus_stop.stopId
+            bus_stop_data_json = json.dumps(result)
+            closest_stops_json += [bus_stop_data_json]
+
+            cache_stops[bus_stop.stopTag + bus_stop.routeTag] = {
+                'data': bus_stop_data_json,
+                'cache_time': cache_time
+            }
+
+    print "closest_stops_json"
+    print len(closest_stops_json)
+    print "miss count:"
+    print miss_count
     # return a json string of an array of json strings for the frontend to parse
     ret = json.dumps(closest_stops_json)
     return ret
