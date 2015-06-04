@@ -1,1 +1,1 @@
-web: export DEPTIMES_CONFIG=prodconfig.py ; python backend/app.py
+web: export DEPTIMES_CONFIG=prodconfig.py ; python runserver.py

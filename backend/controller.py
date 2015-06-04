@@ -1,83 +1,20 @@
-import numpy as np
+from backend import app
 
-import sys
-sys.path.append('backend')
 from models import Location, Stop
+from database import *
 
+from flask import Flask, jsonify, render_template, request, g
+import sys
 import math
 import random
 from xml.dom import minidom
 import requests
-from flask import Flask, jsonify, render_template, request, g
 import json
 import xmltodict
 import inspect
-import sqlite3
 from contextlib import closing
-import os
 from scipy import spatial
 import time
-
-app = Flask(__name__, static_folder = "../frontend")
-
-app.config.from_envvar('DEPTIMES_CONFIG', silent=False)
-
-# None -> cursor
-# helper for connecting to database
-def connect_db():
-    print app.config['DATABASE']
-    return sqlite3.connect(app.config['DATABASE'])
-
-# None => None
-# drops bus_stops table and creates empty table
-def init_db():
-    with closing(connect_db()) as db:
-        with app.open_resource('schema.sql', mode='r') as f:
-            db.cursor().executescript(f.read())
-        db.commit()
-
-# str, list, bool => list
-# query helper which executes query and returns cursor
-# from flask sqlite documentation
-def query_db(query, args=(), one=False):
-    cur = connect_db().execute(query, args)
-    rv = cur.fetchall()
-    cur.close()
-    return (rv[0] if rv else None) if one else rv
-
-# list => None
-# saves all stops in all_stops list to db
-def store_all_stops(all_bus_stops):
-    conn = connect_db()
-    c = conn.cursor()
-    for bus_stop in all_bus_stops:
-        c.execute("insert into bus_stops values ('%s', '%s', '%s', '%s', '%s', '%s', '%s')" % (
-            bus_stop.stopTag,
-            bus_stop.title,
-            bus_stop.lat,
-            bus_stop.lon,
-            bus_stop.stopId,
-            bus_stop.routeTag,
-            bus_stop.agency
-        ))
-    conn.commit()
-    conn.close()
-
-# None => list
-# loads all stops from db
-def load_all_stops():
-    stops = []
-    for bus_stop in query_db('select * from bus_stops'):
-        stops.append(Stop(
-            bus_stop[0],
-            bus_stop[1],
-            bus_stop[2],
-            bus_stop[3],
-            bus_stop[4],
-            bus_stop[5],
-            bus_stop[6],
-        ))
-    return stops
 
 # KDTree, Location, int => list
 # calculates pythagorean distance between stop and loc
@@ -237,15 +174,10 @@ def load_db():
 
     print len(all_stops)
 
-if __name__ == "__main__":
-    app.debug = True
-    #setup first time
-    #refresh_db()
-    #setupend
+#setup first time
+#refresh_db()
+#setupend
 
-    all_stops = []
-    all_stops_kdtree = None
-    load_db()
-    port = int(os.environ.get('PORT', 5000))
-    app.run(host='0.0.0.0', port=port)
-
+all_stops = []
+all_stops_kdtree = None
+load_db()
