@@ -71,7 +71,6 @@
       <tr>
         <th>#</th>
         <th>Agency</th>
-        <th>Bus Title</th>
         <th>Prediction</th>
       </tr>
     </thead>
@@ -79,26 +78,9 @@
       <% _.each(collection, function(model) { %>
         <tr>
           <td><%= model.stopId %></td>
-          <td><%= model.agencyTitle %></td>
-          <td><%= model.stopTitle %></td>
+          <td><%= model.agencyTitle + " " + model.stopTitle %></td>
 
-          <td>
-          <% if (_.every(model.predictions, function(prediction) { return prediction.seconds === undefined} )) { %>
-              <span>There are no predictions for this bus stop.</span>
-          <% } else { %>
-            <span>
-              <% var str = _.map(model.predictions, function (prediction) { %>
-                <% var time = Math.trunc(prediction.seconds / 60) %>
-                <% if (time < 1) { %>
-                  <% return "Now" %>
-                <% } else { %>
-                  <% return time + "min"%>
-                <% } %>
-              <% }) %>
-              <%= str.join(", ") %>
-            </span>
-          <% } %>
-          </td>
+          <td><%= model.message %></td>
         </tr>
       <% }); %>
     </tbody>

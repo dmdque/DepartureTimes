@@ -8,6 +8,7 @@ var data = {
   },
   "num_nearest": 20
 }
+
 var bus_data
 // TODO: not global
 all_models = []
@@ -20,9 +21,6 @@ var getDepartureTimes = function () {
       }
     }
     data.location = custom_location
-    //showPosition(custom_location)
-  } else {
-    //getLocation()
   }
 
   $.ajax({
@@ -47,30 +45,26 @@ var getDepartureTimes = function () {
         stopId: bus_data.body.stopId,
         predictions: []
       }
-      console.log("iddd", bus_data.body.stopId)
     })
     console.log("bus_stops: ", bus_stops)
     console.log(bus_data_list)
 
     console.log(_.map(bus_data_list, function (bus_data) { return bus_data.body.predictions }))
     _.map(bus_data_list, function (bus_data) {
-      // TODO* handle case where there are no directions by displaying route info and no times
       var handle_predictions = function (predictions) {
         var handle_prediction = function (prediction) {
           var handle_direction = function (direction) {
             var handle_prediction2 = function (prediction2) {
               var micro = {
-                // TODO: should these have title in them?
                 routeTag: prediction["@routeTag"],
                 routeTitle: prediction["@routeTitle"],
                 stopTag: prediction["@stopTag"],
                 direction: direction["@title"],
-                epochTime: prediction2["@epochTime"],
-                seconds: prediction2["@seconds"]
+                epochTime: prediction2["@epochTime"]
               }
               bus_stops[bus_data.body.stopId].predictions.push(micro)
               // TODO: remove this debugging
-              if (micro.seconds == undefined || micro.routeTitle == undefined) { debugger }
+              if (micro.epochTime == undefined || micro.routeTitle == undefined) { debugger }
             }
             if (direction.prediction !== undefined) { // not sure if this one is needed
               if (direction.prediction.constructor === Array) {
@@ -148,7 +142,11 @@ var getDepartureTimes = function () {
     var stops_view = new Test.Views.BusStops({collection: stops_collection})
     $("#test").append(stops_view.render().el);
 
-    showPosition(custom_location)
+    if ($("input[name='custom_location']").is(":checked")) {
+      showPosition(custom_location)
+    } else {
+      getLocation()
+    }
   });
 }
 function getLocation() {
@@ -179,9 +177,15 @@ function showPosition(position) {
   var map = new google.maps.Map(document.getElementById("map-canvas"), mapOptions);
 
   var marker_threshold = 5 * 60 // 5 minutes
+  var time_now = Date.now()
 
   _.each(all_models, function(model) {
-    if (model.get("predictions")[0] && model.get("predictions")[0].seconds) {
+    if (
+      model.get("predictions")[0] &&
+      model.get("predictions")[0].epochTime &&
+      (parseInt(model.get("predictions")[0].epochTime) - time_now) >= 0 &&
+      (parseInt(model.get("predictions")[0].epochTime) - time_now) / 1000 < marker_threshold
+    ) {
       if (model.get("predictions").length > 0) {
         var circleOptions = {
           strokeColor: '#FF0000',
@@ -194,9 +198,13 @@ function showPosition(position) {
             model.get("coords").latitude,
             model.get("coords").longitude
           ),
-          radius: (marker_threshold - Math.min(model.get("predictions")[0].seconds, marker_threshold)) / 20 + 5
+          radius: (marker_threshold - Math.min(
+            (parseInt(model.get("predictions")[0].epochTime) - time_now) / 1000,
+            marker_threshold
+          )) / 20 + 5
         };
 
+        console.log("radius", circleOptions.radius)
         // Add the circle for this city to the map.
         cityCircle = new google.maps.Circle(circleOptions);
       }
@@ -206,7 +214,12 @@ function showPosition(position) {
   var marker = new google.maps.Marker({position:latlon,map:map,title:"You are here!"});
 
   _.each(all_models, function(model) {
-    if (model.get("predictions")[0] && model.get("predictions")[0].seconds && model.get("predictions")[0].seconds < marker_threshold) {
+    if (
+      model.get("predictions")[0] &&
+      model.get("predictions")[0].epochTime &&
+      (parseInt(model.get("predictions")[0].epochTime) - time_now) >= 0 &&
+      (parseInt(model.get("predictions")[0].epochTime) - time_now) / 1000 < marker_threshold
+    ) {
       var pos = new google.maps.LatLng(
         model.get("coords").latitude,
         model.get("coords").longitude
@@ -214,7 +227,7 @@ function showPosition(position) {
       var infowindow = new google.maps.InfoWindow({
         map: map,
         position: pos,
-        content: Math.floor(model.get("predictions")[0].seconds / 60) + " min"
+        content: Math.floor((parseInt(model.get("predictions")[0].epochTime) - time_now) / 60000) + " min"
       });
     }
   })
