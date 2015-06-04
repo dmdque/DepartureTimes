@@ -1,4 +1,4 @@
-#import numpy as np
+import numpy as np
 
 import sys
 sys.path.append('backend')
@@ -15,6 +15,7 @@ import inspect
 import sqlite3
 from contextlib import closing
 import os
+from scipy import spatial
 
 app = Flask(__name__, static_folder = "../frontend")
 
@@ -77,6 +78,15 @@ def load_all_stops():
         ))
     return stops
 
+# KDTree, Location, int => list
+# calculates pythagorean distance between stop and loc
+def closest_n_stops_kdtree(stops_kdtree, loc, n):
+    point = [loc.lat, loc.lon]
+    closest_indecies = stops_kdtree.query(point, n)[1]
+    def get_stop_at_index(i): return all_stops[i]
+    closest_stops = map(get_stop_at_index, closest_indecies)
+    return closest_stops
+
 # list, Location, int => list
 # calculates pythagorean distance between stop and loc
 def closest_n_stops(stops, loc, n):
@@ -86,8 +96,7 @@ def closest_n_stops(stops, loc, n):
     #print "all stops length"
     #print len(all_stops)
     #print inspect.getmembers(stops[0], lambda a:not(inspect.isroutine(a)))
-    return stops[0:n]
-
+    return stops[0:n] 
 # str, str, str => xml
 def query_stop_api(agency, routeTag, stopTag):
     return requests.get('http://webservices.nextbus.com/service/publicXMLFeed?command=predictions&a=' + agency + '&r=' + routeTag + '&s=' + stopTag).content
@@ -95,16 +104,17 @@ def query_stop_api(agency, routeTag, stopTag):
 @app.route('/get-closest')
 def get_closest():
     global all_stops
+    global all_stops_kdtree
     loc = Location(
         float(request.args.get('location[coords][latitude]')),
         float(request.args.get('location[coords][longitude]'))
     )
     num_nearest = int(request.args.get('num_nearest'))
 
-    if all_stops == 0:
+    if all_stops_kdtree == None:
         load_db()
 
-    closest = closest_n_stops(all_stops, loc, num_nearest)
+    closest = closest_n_stops_kdtree(all_stops_kdtree, loc, num_nearest)
     closest_stops_json = []
     for bus_stop in closest:
         stop_times = query_stop_api(bus_stop.agency, bus_stop.routeTag, bus_stop.stopTag)
@@ -185,8 +195,13 @@ def get_index():
 # loads all stops from database and stores it in all_stops
 def load_db():
     global all_stops
+    global all_stops_kdtree
     all_stops = []
     all_stops = load_all_stops()
+    def extract_coords(bus_stop):
+        return [bus_stop.lat, bus_stop.lon]
+    all_stops_kdtree = spatial.KDTree(map(extract_coords, all_stops))
+
     print len(all_stops)
 
 if __name__ == "__main__":
@@ -196,6 +211,7 @@ if __name__ == "__main__":
     #setupend
 
     all_stops = []
+    all_stops_kdtree = None
     load_db()
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port)
