@@ -181,7 +181,7 @@ function showPosition(position) {
   var marker_threshold = 5 * 60 // 5 minutes
 
   _.each(all_models, function(model) {
-    if (model.get("predictions")[0] && model.get("predictions")[0].seconds && model.get("predictions")[0].seconds < marker_threshold) {
+    if (model.get("predictions")[0] && model.get("predictions")[0].seconds) {
       if (model.get("predictions").length > 0) {
         var circleOptions = {
           strokeColor: '#FF0000',
@@ -194,9 +194,8 @@ function showPosition(position) {
             model.get("coords").latitude,
             model.get("coords").longitude
           ),
-          radius: (marker_threshold - model.get("predictions")[0].seconds) / 10 + 5
+          radius: (marker_threshold - Math.min(model.get("predictions")[0].seconds, marker_threshold)) / 20 + 5
         };
-        console.log((marker_threshold - model.get("predictions")[0].seconds) / 10 + 5)
 
         // Add the circle for this city to the map.
         cityCircle = new google.maps.Circle(circleOptions);
