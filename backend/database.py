@@ -5,7 +5,6 @@ import sqlite3
 # None -> cursor
 # helper for connecting to database
 def connect_db():
-    print app.config['DATABASE']
     return sqlite3.connect(app.config['DATABASE'])
 
 # None => None
