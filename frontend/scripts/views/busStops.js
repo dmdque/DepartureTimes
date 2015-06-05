@@ -34,7 +34,7 @@ DepTimesApp.Views = DepTimesApp.Views || {};
           return prediction.epochTime === undefined
         })
         if (is_at_least_one_prediction) {
-          model.message = "There are no predictions for this bus stop."
+          model.message = 'There are no predictions for this bus stop.'
         } else {
           // some of the predictions might have been cached by the server
           // filter out all predictions with a negative arrival time
@@ -46,12 +46,12 @@ DepTimesApp.Views = DepTimesApp.Views || {};
           var message = _.map(filtered_predictions, function (prediction) {
             var arrival_time_min = Math.trunc((parseInt(prediction.epochTime) - time_now) / 60000)
             if (arrival_time_min < 1) {
-              return "<strong>Now</strong>: " + prediction.routeTag + " " + prediction.direction
+              return '<strong>Now</strong>: ' + prediction.routeTag + ' ' + prediction.direction
             } else {
-              return "<strong>" + arrival_time_min + "min</strong>: " + prediction.routeTag + " " + prediction.direction
+              return '<strong>' + arrival_time_min + 'min</strong>: ' + prediction.routeTag + ' ' + prediction.direction
             }
           })
-          model.message = message.join("<br>")
+          model.message = message.join('<br>')
         }
       });
 
