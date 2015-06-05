@@ -46,7 +46,7 @@
 
   <label>Number of nearest bus stops:</label>
   <div class="form-group row">
-    <div class="col-md-1">
+    <div class="col-md-2">
       <input id="num-nearest" type="number" name="num-nearest" class="form-control" value="20"></input>
     </div>
   </div>
@@ -58,9 +58,9 @@
   </div>
 
   <div class="row">
-    <div class="col-md-6">
+    <div class="col-md-12">
       <div id="map-canvas"></div>
-      <div class="map-description _map-description">The size of circle indicates how soon the bus will arrive.</div>
+      <div class="map-description _map-description">Circle sizes indicate how soon the bus will arrive.</div>
     </div>
   </div>
   <br>
@@ -71,7 +71,6 @@
   </div>
   <div id="closest_busses"></div>
   <div id="closest_bus_stops"></div>
-  <div id="demo"></div>
 
 <script type="text/template" id="busStop-template">
 <div class="view">
@@ -87,7 +86,7 @@
     <thead>
       <tr>
         <th>#</th>
-        <th>Agency</th>
+        <th>Bus Name</th>
         <th>Prediction</th>
       </tr>
     </thead>
@@ -95,7 +94,7 @@
       <% _.each(collection, function(model) { %>
         <tr>
           <td><%= model.stopId %></td>
-          <td><%= model.agencyTitle + " " + model.stopTitle %></td>
+          <td><%= model.agencyTitle + ": " + model.stopTitle %></td>
 
           <td><%= model.message %></td>
         </tr>

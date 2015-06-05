@@ -27,9 +27,10 @@ all_stops_kdtree = None
 def get_index():
     return render_template('index.html')
 
-# None -> jsonstring
+# None -> jsonstring | str
 # calculates num_nearest closest stops by querying NextBus API, and sends the
 # data back to the client
+# returns "distance error" if user location is too far away from bus stops
 @app.route('/get-closest')
 def get_closest():
     global all_stops
@@ -46,6 +47,8 @@ def get_closest():
     print "num_nearest"
     print num_nearest
     closest = closest_n_stops_kdtree(all_stops_kdtree, loc, num_nearest)
+    if closest == None:
+        return "distance error"
 
     def extract_stopId(bus_stop):
         return [bus_stop.stopId, bus_stop.routeTag]
@@ -79,16 +82,23 @@ def get_closest():
 
     print "miss count:"
     print miss_count
-    # return a json string of an array of json strings for the frontend to parse
+    # return a json string of an array of json strings for the frontend to
+    # parse
     ret = json.dumps(closest_stops_json)
     return ret
 
-# KDTree, Location, int => list
+# KDTree, Location, int => list | None
 # calculates pythagorean distance between stop and loc
+# returns None is user is too far away
 def closest_n_stops_kdtree(stops_kdtree, loc, n):
     point = [loc.lat, loc.lon]
-    closest_indecies = stops_kdtree.query(point, n)[1]
-    def get_stop_at_index(i): return all_stops[i]
+    distances, closest_indecies = stops_kdtree.query(point, n)
+    if distances[0] > 0.1:
+        return None
+    # note that this kdtree implementation can only handle sets of points (no
+    # metadata) thus we use the returned indecies to get the actual stop data
+    def get_stop_at_index(i):
+      return all_stops[i]
     closest_stops = map(get_stop_at_index, closest_indecies)
     return closest_stops
 

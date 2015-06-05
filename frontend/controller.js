@@ -58,6 +58,10 @@ var getDepartureTimes = function () {
     data: data,
     context: document.body
   }).done(function(data) {
+    if (data == "distance error") {
+      alert("You're too far away from any bus stops. Try Uber instead.")
+      return
+    }
     var data_list_json = JSON.parse(data)
     console.log(data_list_json)
     var bus_data_list = _.map(data_list_json, function (bus_data) {
@@ -179,7 +183,7 @@ var getDepartureTimes = function () {
       if (user_location !== undefined) {
         showMap(user_location)
       } else {
-        alert("Cannot complete request")
+        alert("Cannot get your location.")
       }
     }
   });
@@ -201,16 +205,16 @@ function savePosition(position) {
 function showError(error) {
   switch(error.code) {
     case error.PERMISSION_DENIED:
-      x.innerHTML = "User denied the request for Geolocation."
+      alert("You must allow the request for Geolocation for it to work.")
       break;
     case error.POSITION_UNAVAILABLE:
-      x.innerHTML = "Location information is unavailable."
+      alert("Location information is unavailable.")
       break;
     case error.TIMEOUT:
-      x.innerHTML = "The request to get user location timed out."
+      alert("The request to get your location timed out.")
       break;
     case error.UNKNOWN_ERROR:
-      x.innerHTML = "An unknown error occurred."
+      alert("An unknown error occurred.")
       break;
   }
 }
@@ -221,22 +225,20 @@ function showMap(position) {
 
   latlon = new google.maps.LatLng(lat, lon)
   mapholder = document.getElementById('map-canvas')
-  mapholder.style.height = '250px';
-  mapholder.style.width = '500px';
 
   var mapOptions = {
-    center:latlon,
+    center: latlon,
     zoom: 17,
     mapTypeId: google.maps.MapTypeId.ROADMAP,
-    mapTypeControl:false,
-    navigationControlOptions:{style:google.maps.NavigationControlStyle.SMALL}
+    mapTypeControl: false,
+    navigationControlOptions: {style: google.maps.NavigationControlStyle.ANDROID}
   }
 
   var map = new google.maps.Map(document.getElementById("map-canvas"), mapOptions);
   var marker = new google.maps.Marker({position:latlon,map:map,title:"You are here!"});
   $("._map-description").show()
 
-  var marker_threshold = 5 * 60 // 5 minutes
+  var marker_min_threshold = 10 * 60
   var time_now = Date.now()
 
   _.each(all_models, function(model) {
@@ -244,7 +246,7 @@ function showMap(position) {
       model.get("predictions")[0] &&
       model.get("predictions")[0].epochTime &&
       (parseInt(model.get("predictions")[0].epochTime) - time_now) >= 0 &&
-      (parseInt(model.get("predictions")[0].epochTime) - time_now) / 1000 < marker_threshold
+      (parseInt(model.get("predictions")[0].epochTime) - time_now) / 1000 < marker_min_threshold
     ) {
       if (model.get("predictions").length > 0) {
         var circleOptions = {
@@ -258,9 +260,9 @@ function showMap(position) {
             model.get("coords").latitude,
             model.get("coords").longitude
           ),
-          radius: (marker_threshold - Math.min(
+          radius: (marker_min_threshold - Math.min(
             (parseInt(model.get("predictions")[0].epochTime) - time_now) / 1000,
-            marker_threshold
+            marker_min_threshold
           )) / 20 + 5
         };
 
@@ -276,7 +278,7 @@ function showMap(position) {
       model.get("predictions")[0] &&
       model.get("predictions")[0].epochTime &&
       (parseInt(model.get("predictions")[0].epochTime) - time_now) >= 0 &&
-      (parseInt(model.get("predictions")[0].epochTime) - time_now) / 1000 < marker_threshold
+      (parseInt(model.get("predictions")[0].epochTime) - time_now) / 1000 < marker_min_threshold
     ) {
       var pos = new google.maps.LatLng(
         model.get("coords").latitude,

@@ -5,3 +5,22 @@
 .map-description {
   display: none;
 }
+
+#map-canvas {
+  height: 500px;
+  width: 1000px;
+}
+
+@media screen and (max-width: 1000px) {
+  #map-canvas {
+    height: 300px;
+    width: 600px;
+  }
+}
+
+@media screen and (max-width: 500px) {
+  #map-canvas {
+    height: 250px;
+    width: 300px;
+  }
+}
