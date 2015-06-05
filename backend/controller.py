@@ -18,79 +18,80 @@ import time
 
 cache_limit = 100
 cache_stops = {}
-cache_timeout = 5 * 60
+cache_timeout = 10 * 60
 
+nextbus_api_url_base = 'http://webservices.nextbus.com/service/publicXMLFeed'
 all_stops_list = []
 all_stops_kdtree = None
 
-@app.route("/")
+@app.route('/')
 def get_index():
     return render_template('index.html')
 
 # None -> jsonstring | str
 # calculates num_nearest closest stops by querying NextBus API, and sends the
 # data back to the client
-# returns "distance error" if user location is too far away from bus stops
+# returns 'distance error' if user location is too far away from bus stops
 @app.route('/get-closest')
 def get_closest():
     global all_stops_list
     global all_stops_kdtree
+    num_nearest = int(request.args.get('num_nearest'))
     loc = Location(
         float(request.args.get('location[coords][latitude]')),
         float(request.args.get('location[coords][longitude]'))
     )
-    num_nearest = int(request.args.get('num_nearest'))
 
+    # load stops into memory if not already done so
     if all_stops_kdtree == None:
         load_db()
 
     closest = closest_n_stops_kdtree(all_stops_kdtree, loc, num_nearest)
     if closest == None:
-        return "distance error"
-
-    def extract_stopId(bus_stop):
-        return [bus_stop.stopId, bus_stop.routeTag]
+        return 'distance error'
 
     closest_stops_json = []
-    miss_count = 0 # for testing purposes
+    cache_miss_count = 0 # for testing purposes
     for bus_stop in closest:
         time_now = time.time()
         print bus_stop.stopId
-        if (bus_stop.stopTag + bus_stop.routeTag) in cache_stops and time_now - cache_stops[bus_stop.stopTag + bus_stop.routeTag]['cache_time'] < cache_timeout:
-            closest_stops_json += [cache_stops[bus_stop.stopTag + bus_stop.routeTag]['data']]
-            print time_now - cache_stops[bus_stop.stopTag + bus_stop.routeTag]['cache_time']
+        bus_key = bus_stop.stopTag + bus_stop.routeTag
+
+        if bus_key in cache_stops and (time_now - cache_stops[bus_key]['cache_time']) < cache_timeout:
+            closest_stops_json += [cache_stops[bus_key]['data']]
         else:
-            if (bus_stop.stopTag + bus_stop.routeTag) in cache_stops:
-                print time_now - cache_stops[bus_stop.stopTag + bus_stop.routeTag]['cache_time']
-            miss_count += 1
+            if bus_key in cache_stops:
+                print time_now - cache_stops[bus_key]['cache_time']
+            cache_miss_count += 1
             cache_time = time.time()
+
             stop_times = query_stop_api(bus_stop.agency, bus_stop.routeTag, bus_stop.stopTag)
             result = xmltodict.parse(stop_times)
-            result["body"]["lat"] = bus_stop.lat
-            result["body"]["lon"] = bus_stop.lon
-            result["body"]["stopId"] = bus_stop.stopId
+            # add metadata to cached stop
+            result['body']['lat'] = bus_stop.lat
+            result['body']['lon'] = bus_stop.lon
+            result['body']['stopId'] = bus_stop.stopId
             bus_stop_data_json = json.dumps(result)
             closest_stops_json += [bus_stop_data_json]
 
-            cache_stops[bus_stop.stopTag + bus_stop.routeTag] = {
+            # we cache the bus stop as a json and a timestamp
+            cache_stops[bus_key] = {
                 'data': bus_stop_data_json,
                 'cache_time': cache_time
             }
 
-    print "miss count:"
-    print miss_count
-    # return a json string of an array of json strings for the frontend to
-    # parse
-    ret = json.dumps(closest_stops_json)
-    return ret
+    print 'cache miss count:'
+    print cache_miss_count
+    # return a json of an array of jsons for the frontend to parse
+    return json.dumps(closest_stops_json)
 
 # KDTree, Location, int => list | None
-# calculates pythagorean distance between stop and loc
+# uses kdtree to determine closest bus stops
 # returns None is user is too far away
 def closest_n_stops_kdtree(stops_kdtree, loc, n):
-    point = [loc.lat, loc.lon]
-    distances, closest_indecies = stops_kdtree.query(point, n)
-    if distances[0] > 0.1:
+    user_loc = [loc.lat, loc.lon]
+    distances, closest_indecies = stops_kdtree.query(user_loc, n)
+    if distances[0] > 0.1: # 0.1 degrees is about 10km
         return None
     # note that this kdtree implementation can only handle sets of points (no
     # metadata) thus we use the returned indecies to get the actual stop data
@@ -100,9 +101,10 @@ def closest_n_stops_kdtree(stops_kdtree, loc, n):
     return closest_stops
 
 # list, Location, int => list
-# calculates pythagorean distance between stop and loc
+# returns the n closest stops
 # replaced by closest_n_stops_kdtree
 def closest_n_stops(stops, loc, n):
+  # calculates pythagorean distance between stop and loc
     def calcDistance(stop):
         return math.sqrt(math.pow(loc.lat - stop.lat, 2) + math.pow(loc.lon - stop.lon, 2))
     stops = sorted(stops, key = lambda x: calcDistance(x))
@@ -111,25 +113,26 @@ def closest_n_stops(stops, loc, n):
 # str, str, str => xml
 # queries NextBus API for information about a route-specific bus stop
 def query_stop_api(agency, routeTag, stopTag):
-    return requests.get('http://webservices.nextbus.com/service/publicXMLFeed?command=predictions&a=' + agency + '&r=' + routeTag + '&s=' + stopTag).content
+    return requests.get(nextbus_api_url_base + '?command=predictions&a=' + agency + '&r=' + routeTag + '&s=' + stopTag).content
 
 # string, string => None
-# stores route information from api into all_stops_list list
+# downloads and stores route information from API into all_stops_list
 def get_route(routeTag, agency):
     global all_stops_list
-    route_stops = requests.get("http://webservices.nextbus.com/service/publicXMLFeed?command=routeConfig&a=" + agency + "&r=" + routeTag).content
-    route_stops_dict = xmltodict.parse(route_stops)
+    response = requests.get(nextbus_api_url_base + '?command=routeConfig&a=' + agency + '&r=' + routeTag).content
+    route_stops = xmltodict.parse(response)
     stops = []
-    for stop in route_stops_dict["body"]["route"]["stop"]:
-        if "@stopId" in stop:
-            title = stop["@title"]
+    for stop in route_stops['body']['route']['stop']:
+        if '@stopId' in stop:
+            title = stop['@title']
             title = title.replace('\'', '\'\'') # escape ' with '' for SQL
-            stops.append(Stop(stop["@tag"],
+            stops.append(Stop(
+                stop['@tag'],
                 title,
-                float(stop["@lat"]),
-                float(stop["@lon"]),
-                stop["@stopId"],
-                route_stops_dict["body"]["route"]["@tag"],
+                float(stop['@lat']),
+                float(stop['@lon']),
+                stop['@stopId'],
+                route_stops['body']['route']['@tag'],
                 agency
             ))
     all_stops_list += stops
@@ -137,11 +140,13 @@ def get_route(routeTag, agency):
 # str => None
 # downloads agency's route information from NextBus API
 def get_routes(agency):
-    routes = requests.get("http://webservices.nextbus.com/service/publicXMLFeed?command=routeList&a=" + agency).content
+    routes = requests.get(nextbus_api_url_base + '?command=routeList&a=' + agency).content
     routes_dict = xmltodict.parse(routes)
-    for route in routes_dict["body"]["route"]:
-        get_route(route["@tag"], agency)
+    for route in routes_dict['body']['route']:
+        get_route(route['@tag'], agency)
 
+# [str] => None
+# downloads all specified agency route information from NextBus API
 def get_all_agency_routes(agencies):
     for agency in agencies:
         get_routes(agency)
@@ -153,9 +158,11 @@ def refresh_db():
     global all_stops_list
     init_db()
     all_stops_list = []
-    agencies = ["sf-muni", "actransit", "sf-mission-bay", "unitrans", "ucsf", "dumbarton", "emery"]
+    # these are the agencies in the Northen-California area
+    agencies = ['sf-muni', 'actransit', 'sf-mission-bay', 'unitrans', 'ucsf', 'dumbarton', 'emery']
     get_all_agency_routes(agencies)
     store_all_stops(all_stops_list)
+    print "number of stops stored in database"
     print len(all_stops_list)
 
 # None => None
@@ -169,6 +176,7 @@ def load_db():
         return [bus_stop.lat, bus_stop.lon]
     all_stops_kdtree = spatial.KDTree(map(extract_coords, all_stops_list))
 
+    print "number of stops loaded from database"
     print len(all_stops_list)
 
 ## first-time db set up
