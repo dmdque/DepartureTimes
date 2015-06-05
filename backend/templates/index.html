@@ -16,37 +16,54 @@
 <div class="container">
   <h1>Departure Times</h1>
 
-  <!--<div>Your location is: </div>-->
-  <div class="form-group">
-    User custom location:<br>
-    <div class="col-md-1">
-      <input type="checkbox" name="custom_location" checked>
+  <div class="row">
+    <span class="col-md-3">
+      User custom location:
+      <input type="checkbox" name="custom_location_checkbox" onchange="toggle(this)" checked>
+    </span>
+  </div>
+
+  <div class="row">
+    <div class="col-md-6 user-location-label _user-location-label">
+      <label>Your location is: </label>
+      <br>
+      <span id="user-location"></span>
     </div>
-    <div class="col-md-3">
+  </div>
+
+
+  <div class="custom_location">
+  <label>Latitude and Longitude:</label>
+  <div class="form-group row">
+    <div class="col-md-2">
       <input id="lat" type="number" name="latitude" class="form-control" value="37.791028"></input>
     </div>
-    <div class="col-md-3">
+    <div class="col-md-2">
       <input id="lon" type="number" name="longitude" class="form-control" value="-122.393375"></input>
     </div>
-    <button class="btn btn-default" onclick="getDepartureTimes()">Get</button>
-    <!--show only if checkbox is checked-->
-    <!--googleplex-->
-    <!--37.422,-122.084058-->
-    <!--Toronto-->
-    <!--<div class="col-md-3">-->
-      <!--<input id="lat" type="number" name="latitude" class="form-control" value="43.7387793"></input>-->
-    <!--</div>-->
-    <!--<div class="col-md-3">-->
-      <!--<input id="lon" type="number" name="longitude" class="form-control" value="-79.3138695"></input>-->
-    <!--</div>-->
+  </div>
+  </div>
+
+  <label>Number of nearest bus stops:</label>
+  <div class="form-group row">
+    <div class="col-md-1">
+      <input id="num-nearest" type="number" name="num-nearest" class="form-control" value="20"></input>
+    </div>
+  </div>
+
+  <div class="form-group row">
+    <div class="col-md-2">
+      <button class="btn btn-default" onclick="getDepartureTimes()">Get</button>
+    </div>
   </div>
 
   <div class="row">
     <div class="col-md-6">
       <div id="map-canvas"></div>
-      <div class="description">The size of circle indicates how soon the bus will arrive.</div>
+      <div class="map-description _map-description">The size of circle indicates how soon the bus will arrive.</div>
     </div>
   </div>
+  <br>
   <div class="row">
     <div class="col-md-12">
       <div id="test"></div>

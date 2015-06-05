@@ -1,19 +1,43 @@
+var user_location
+// TODO not global
+var all_models = []
+
 var x = document.getElementById("demo");
+// default values
 var data = {
   "location": {
     "coords": {
-      "latitude": 37.791028,
+      "latitude": 37.791028, // default location (Uber)
       "longitude": -122.393375
     }
   },
   "num_nearest": 20
 }
 
-var bus_data
-// TODO: not global
-all_models = []
+var toggle = function (element) {
+  if (element.checked === true) {
+    $(".custom_location").show()
+    $("._user-location-label").hide()
+  }
+  else {
+    $(".custom_location").hide()
+    if (user_location !== undefined) {
+      console.log("user locatoin", user_location);
+      $("#user-location").text("Latitude: " + user_location.coords.latitude + ", Longitude: " + user_location.coords.longitude)
+      $("._user-location-label").show()
+    }
+  }
+}
+
 var getDepartureTimes = function () {
-  if ($("input[name='custom_location']").is(":checked")) {
+  data.num_nearest = $("input#num-nearest").val()
+  if (data.num_nearest < 0 || data.num_nearest > 1000) {
+    alert("Please enter a value between 0 and 1000")
+    return
+  }
+
+  if ($("input[name='custom_location_checkbox']").is(":checked")) {
+    $("._user-location-label").hide()
     custom_location = {
       "coords": {
         "latitude": $("input#lat").val(),
@@ -21,6 +45,12 @@ var getDepartureTimes = function () {
       }
     }
     data.location = custom_location
+  } else {
+      if (user_location !== undefined) {
+        data.location = user_location
+      } else {
+        alert("Cannot complete request")
+      }
   }
 
   $.ajax({
@@ -140,24 +170,52 @@ var getDepartureTimes = function () {
     console.log("all_models", all_models)
     var stops_collection = new Test.Collections.BusStops(stop_models)
     var stops_view = new Test.Views.BusStops({collection: stops_collection})
-    $("#test").append(stops_view.render().el);
+    $("#test").prepend(stops_view.render().el);
 
-    if ($("input[name='custom_location']").is(":checked")) {
-      showPosition(custom_location)
+    if ($("input[name='custom_location_checkbox']").is(":checked")) {
+      console.log("using custom location")
+      showMap(custom_location)
     } else {
-      getLocation()
+      if (user_location !== undefined) {
+        showMap(user_location)
+      } else {
+        alert("Cannot complete request")
+      }
     }
   });
 }
+
 function getLocation() {
   if (navigator.geolocation) {
-    navigator.geolocation.getCurrentPosition(showPosition, showError);
+    navigator.geolocation.getCurrentPosition(savePosition, showError);
   } else {
     x.innerHTML = "Geolocation is not supported by this browser.";
   }
 }
 
-function showPosition(position) {
+function savePosition(position) {
+  console.log("getting location")
+  user_location = position
+}
+
+function showError(error) {
+  switch(error.code) {
+    case error.PERMISSION_DENIED:
+      x.innerHTML = "User denied the request for Geolocation."
+      break;
+    case error.POSITION_UNAVAILABLE:
+      x.innerHTML = "Location information is unavailable."
+      break;
+    case error.TIMEOUT:
+      x.innerHTML = "The request to get user location timed out."
+      break;
+    case error.UNKNOWN_ERROR:
+      x.innerHTML = "An unknown error occurred."
+      break;
+  }
+}
+
+function showMap(position) {
   lat = position.coords.latitude;
   lon = position.coords.longitude;
 
@@ -175,6 +233,8 @@ function showPosition(position) {
   }
 
   var map = new google.maps.Map(document.getElementById("map-canvas"), mapOptions);
+  var marker = new google.maps.Marker({position:latlon,map:map,title:"You are here!"});
+  $("._map-description").show()
 
   var marker_threshold = 5 * 60 // 5 minutes
   var time_now = Date.now()
@@ -211,8 +271,6 @@ function showPosition(position) {
     }
   })
 
-  var marker = new google.maps.Marker({position:latlon,map:map,title:"You are here!"});
-
   _.each(all_models, function(model) {
     if (
       model.get("predictions")[0] &&
@@ -234,20 +292,4 @@ function showPosition(position) {
 
 }
 
-function showError(error) {
-  switch(error.code) {
-    case error.PERMISSION_DENIED:
-      x.innerHTML = "User denied the request for Geolocation."
-      break;
-    case error.POSITION_UNAVAILABLE:
-      x.innerHTML = "Location information is unavailable."
-      break;
-    case error.TIMEOUT:
-      x.innerHTML = "The request to get user location timed out."
-      break;
-    case error.UNKNOWN_ERROR:
-      x.innerHTML = "An unknown error occurred."
-      break;
-  }
-}
-
+getLocation()
