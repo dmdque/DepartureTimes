@@ -28,6 +28,6 @@ Other notes:
 
 
 ##Todo:
-- implement timer for U to update bus times
+- implement timer for UI to update bus times
 - limit stops cache to a couple hundred stops so that it doesn't eat up too much memory
 - write tests
