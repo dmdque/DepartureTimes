@@ -1,5 +1,3 @@
-/*global DepTimesApp, Backbone*/
-
 DepTimesApp.Collections = DepTimesApp.Collections || {};
 
 (function () {

@@ -1,5 +1,3 @@
-/*global DepTimesApp, Backbone, JST*/
-
 DepTimesApp.Views = DepTimesApp.Views || {};
 
 (function () {

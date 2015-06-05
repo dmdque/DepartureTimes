@@ -1,5 +1,3 @@
-/*global DepTimesApp, Backbone*/
-
 DepTimesApp.Models = DepTimesApp.Models || {};
 
 (function () {

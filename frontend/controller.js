@@ -1,6 +1,6 @@
 var user_location
 
-var toggle = function (element) {
+var onToggleCheckbox = function (element) {
   if (element.checked === true) {
     $(".custom_location").show()
     $("._user-location-label").hide()
@@ -35,7 +35,7 @@ var getDepartureTimes = function () {
       if (user_location !== undefined) {
         data.location = user_location
       } else {
-        alert("Cannot complete request")
+        alert("Cannot complete request.")
       }
   }
 
@@ -48,10 +48,14 @@ var getDepartureTimes = function () {
       alert("You're too far away from any bus stops. Try Uber instead.")
       return
     }
+
+    // data is a json of an array of jsons
     var data_list_json = JSON.parse(data)
     var bus_data_list = _.map(data_list_json, function (bus_data) {
       return JSON.parse(bus_data)
     })
+
+    // this hash object is group predictions by their stopId
     bus_stops = {}
     _.each(bus_data_list, function (bus_data) {
       bus_stops[bus_data.body.stopId] = {
@@ -65,25 +69,24 @@ var getDepartureTimes = function () {
         predictions: []
       }
     })
-    console.log(bus_data_list)
 
     // massages the bus data and converts them into backbone models
+    // makes use of many helper functions to deal with branching cases of api
     _.map(bus_data_list, function (bus_data) {
       var handle_predictions = function (predictions) {
         var handle_prediction = function (prediction) {
           var handle_direction = function (direction) {
             var handle_prediction2 = function (prediction2) {
-              var micro = {
+              var pred = {
                 routeTag: prediction["@routeTag"],
                 routeTitle: prediction["@routeTitle"],
                 stopTag: prediction["@stopTag"],
                 direction: direction["@title"],
                 epochTime: prediction2["@epochTime"]
               }
-              bus_stops[bus_data.body.stopId].predictions.push(micro)
-              //if (micro.epochTime == undefined || micro.routeTitle == undefined) { debugger }
+              bus_stops[bus_data.body.stopId].predictions.push(pred)
             }
-            if (direction.prediction !== undefined) { // not sure if this one is needed
+            if (direction.prediction !== undefined) {
               if (direction.prediction.constructor === Array) {
                 _.each(direction.prediction, function (prediction2) {
                   handle_prediction2(prediction2)
@@ -93,7 +96,8 @@ var getDepartureTimes = function () {
               }
             }
           }
-          if (prediction.direction !== undefined) { // sometimes predictions don't have a direction field
+          // sometimes predictions don't have a direction field
+          if (prediction.direction !== undefined) {
             if (prediction.direction.constructor === Array) {
               _.each(prediction.direction, function (direction) {
                 handle_direction(direction)
@@ -117,14 +121,12 @@ var getDepartureTimes = function () {
       handle_predictions(bus_data.body.predictions)
     })
 
-    var stop_models = []
-    _.each(bus_stops, function (bus_stop, key) {
+    // create an array of Backbone models for the bus stops
+    var stop_models = _.map(bus_stops, function (bus_stop, key) {
+      // first we sort the predictions by arrival time
       bus_stop.predictions.sort(function(a, b) {
-        if (a == undefined) {
-          return 1
-        }
-        if (b == undefined)
-          return -1
+        if (a == undefined) return 1
+        if (b == undefined) return -1
         return parseInt(a.epochTime) - parseInt(b.epochTime)
       })
       var stop_model = new DepTimesApp.Models.BusStop({
@@ -134,14 +136,14 @@ var getDepartureTimes = function () {
         "stopId": bus_stop.stopId,
         "coords": bus_stop.coords
       })
-      stop_models.push(stop_model)
+      return stop_model
     })
-    all_models = stop_models
 
     var stops_collection = new DepTimesApp.Collections.BusStops(stop_models)
     var stops_view = new DepTimesApp.Views.BusStops({collection: stops_collection})
     $("._bus-data-container").prepend(stops_view.render().el);
 
+    // call the showMap function
     if ($("input[name='custom_location_checkbox']").is(":checked")) {
       showMap(custom_location, stop_models)
     } else {
@@ -162,6 +164,7 @@ function getLocation() {
   }
 }
 
+// saves the geolocation position into global variable
 function savePosition(position) {
   user_location = position
 }
@@ -183,29 +186,32 @@ function showError(error) {
   }
 }
 
+// causes the map to appear, with circles and markers to indicate bus stops
 function showMap(position, stop_models) {
-  lat = position.coords.latitude;
-  lon = position.coords.longitude;
+  var mapholder, user_latlon, mapOptions, map, marker, time_now
+  var marker_min_threshold = 10 * 60
 
-  user_position = new google.maps.LatLng(lat, lon)
   mapholder = document.getElementById('map-canvas')
-
-  var mapOptions = {
-    center: user_position,
+  user_latlon = new google.maps.LatLng(
+    position.coords.latitude,
+    position.coords.longitude
+  )
+  mapOptions = {
+    center: user_latlon,
     zoom: 17,
     mapTypeId: google.maps.MapTypeId.ROADMAP,
     mapTypeControl: false,
     navigationControlOptions: {style: google.maps.NavigationControlStyle.ANDROID}
   }
 
-  var map = new google.maps.Map(document.getElementById("map-canvas"), mapOptions);
-  var marker = new google.maps.Marker({position: user_position,map:map,title:"You are here!"});
+  map = new google.maps.Map(document.getElementById("map-canvas"), mapOptions);
+  marker = new google.maps.Marker({position: user_latlon, map: map, title: "You are here!"});
   $("._map-description").show()
 
-  var marker_min_threshold = 10 * 60
-  var time_now = Date.now()
-
+  // add circles to indicate which buses are leaving soon
+  time_now = Date.now() // time_now is used to compare with predictions' epochTimes
   _.each(stop_models, function(model) {
+    var circleOptions
     if (
       model.get("predictions")[0] &&
       model.get("predictions")[0].epochTime &&
@@ -213,7 +219,7 @@ function showMap(position, stop_models) {
       (parseInt(model.get("predictions")[0].epochTime) - time_now) / 1000 < marker_min_threshold
     ) {
       if (model.get("predictions").length > 0) {
-        var circleOptions = {
+        circleOptions = {
           strokeColor: '#FF0000',
           strokeOpacity: 0.8,
           strokeWeight: 2,
@@ -229,32 +235,31 @@ function showMap(position, stop_models) {
             marker_min_threshold
           )) / 20 + 5
         };
-
-        // Add the circle for this city to the map.
         cityCircle = new google.maps.Circle(circleOptions);
       }
     }
   })
 
+  // add infoWindows to indicate time until departure
   _.each(stop_models, function(model) {
+    var pos, infowindow
     if (
       model.get("predictions")[0] &&
       model.get("predictions")[0].epochTime &&
       (parseInt(model.get("predictions")[0].epochTime) - time_now) >= 0 &&
       (parseInt(model.get("predictions")[0].epochTime) - time_now) / 1000 < marker_min_threshold
     ) {
-      var pos = new google.maps.LatLng(
+      pos = new google.maps.LatLng(
         model.get("coords").latitude,
         model.get("coords").longitude
       )
-      var infowindow = new google.maps.InfoWindow({
+      infowindow = new google.maps.InfoWindow({
         map: map,
         position: pos,
         content: Math.floor((parseInt(model.get("predictions")[0].epochTime) - time_now) / 60000) + " min"
       });
     }
   })
-
 }
 
 getLocation()
