@@ -1,12 +1,11 @@
-/*global Test, Backbone, JST*/
+/*global DepTimesApp, Backbone, JST*/
 
-Test.Views = Test.Views || {};
+DepTimesApp.Views = DepTimesApp.Views || {};
 
 (function () {
   'use strict';
-  console.log("views starting")
 
-  Test.Views.BusStop = Backbone.View.extend({
+  DepTimesApp.Views.BusStop = Backbone.View.extend({
 
     template: _.template($('#busStop-template').html()),
 
@@ -28,6 +27,5 @@ Test.Views = Test.Views || {};
     }
 
   });
-  console.log("busstopview", Test.Views.BusStop)
 
 })();

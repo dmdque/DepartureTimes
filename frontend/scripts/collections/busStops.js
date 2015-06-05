@@ -1,13 +1,13 @@
-/*global Test, Backbone*/
+/*global DepTimesApp, Backbone*/
 
-Test.Collections = Test.Collections || {};
+DepTimesApp.Collections = DepTimesApp.Collections || {};
 
 (function () {
   'use strict';
 
-  Test.Collections.BusStops = Backbone.Collection.extend({
+  DepTimesApp.Collections.BusStops = Backbone.Collection.extend({
 
-    model: Test.Models.BusStop
+    model: DepTimesApp.Models.BusStop
 
   });
 

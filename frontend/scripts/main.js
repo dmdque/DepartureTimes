@@ -1,4 +1,4 @@
-window.Test = {
+window.DepTimesApp = {
   Models: {},
   Collections: {},
   Views: {},
@@ -10,5 +10,5 @@ window.Test = {
 
 $(document).ready(function () {
   'use strict';
-  Test.init();
+  DepTimesApp.init();
 });

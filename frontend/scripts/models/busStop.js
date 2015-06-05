@@ -1,11 +1,11 @@
-/*global Test, Backbone*/
+/*global DepTimesApp, Backbone*/
 
-Test.Models = Test.Models || {};
+DepTimesApp.Models = DepTimesApp.Models || {};
 
 (function () {
   'use strict';
 
-  Test.Models.BusStop = Backbone.Model.extend({
+  DepTimesApp.Models.BusStop = Backbone.Model.extend({
 
     url: '',
 

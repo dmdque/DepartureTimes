@@ -1,16 +1,5 @@
 var user_location
 
-// default values
-var data = {
-  "location": {
-    "coords": {
-      "latitude": 37.791028, // default location (Uber)
-      "longitude": -122.393375
-    }
-  },
-  "num_nearest": 20
-}
-
 var toggle = function (element) {
   if (element.checked === true) {
     $(".custom_location").show()
@@ -26,6 +15,7 @@ var toggle = function (element) {
 }
 
 var getDepartureTimes = function () {
+  var data = {}
   data.num_nearest = $("input#num-nearest").val()
   if (data.num_nearest < 0 || data.num_nearest > 1000) {
     alert("Please enter a value between 0 and 1000")
@@ -75,9 +65,9 @@ var getDepartureTimes = function () {
         predictions: []
       }
     })
-    console.log("bus_stops: ", bus_stops)
     console.log(bus_data_list)
 
+    // massages the bus data and converts them into backbone models
     _.map(bus_data_list, function (bus_data) {
       var handle_predictions = function (predictions) {
         var handle_prediction = function (prediction) {
@@ -91,8 +81,7 @@ var getDepartureTimes = function () {
                 epochTime: prediction2["@epochTime"]
               }
               bus_stops[bus_data.body.stopId].predictions.push(micro)
-              // TODO: remove this debugging
-              if (micro.epochTime == undefined || micro.routeTitle == undefined) { debugger }
+              //if (micro.epochTime == undefined || micro.routeTitle == undefined) { debugger }
             }
             if (direction.prediction !== undefined) { // not sure if this one is needed
               if (direction.prediction.constructor === Array) {
@@ -127,7 +116,6 @@ var getDepartureTimes = function () {
       }
       handle_predictions(bus_data.body.predictions)
     })
-    console.log(bus_stops)
 
     var stop_models = []
     _.each(bus_stops, function (bus_stop, key) {
@@ -139,7 +127,7 @@ var getDepartureTimes = function () {
           return -1
         return parseInt(a.epochTime) - parseInt(b.epochTime)
       })
-      var stop_model = new Test.Models.BusStop({
+      var stop_model = new DepTimesApp.Models.BusStop({
         "agencyTitle": bus_stop.agencyTitle,
         "stopTitle": bus_stop.stopTitle,
         "predictions": bus_stop.predictions,
@@ -149,10 +137,10 @@ var getDepartureTimes = function () {
       stop_models.push(stop_model)
     })
     all_models = stop_models
-    console.log("all_models", all_models)
-    var stops_collection = new Test.Collections.BusStops(stop_models)
-    var stops_view = new Test.Views.BusStops({collection: stops_collection})
-    $("#test").prepend(stops_view.render().el);
+
+    var stops_collection = new DepTimesApp.Collections.BusStops(stop_models)
+    var stops_view = new DepTimesApp.Views.BusStops({collection: stops_collection})
+    $("._bus-data-container").prepend(stops_view.render().el);
 
     if ($("input[name='custom_location_checkbox']").is(":checked")) {
       showMap(custom_location, stop_models)
@@ -199,11 +187,11 @@ function showMap(position, stop_models) {
   lat = position.coords.latitude;
   lon = position.coords.longitude;
 
-  latlon = new google.maps.LatLng(lat, lon)
+  user_position = new google.maps.LatLng(lat, lon)
   mapholder = document.getElementById('map-canvas')
 
   var mapOptions = {
-    center: latlon,
+    center: user_position,
     zoom: 17,
     mapTypeId: google.maps.MapTypeId.ROADMAP,
     mapTypeControl: false,
@@ -211,7 +199,7 @@ function showMap(position, stop_models) {
   }
 
   var map = new google.maps.Map(document.getElementById("map-canvas"), mapOptions);
-  var marker = new google.maps.Marker({position:latlon,map:map,title:"You are here!"});
+  var marker = new google.maps.Marker({position: user_position,map:map,title:"You are here!"});
   $("._map-description").show()
 
   var marker_min_threshold = 10 * 60
