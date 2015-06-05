@@ -1,8 +1,5 @@
 var user_location
-// TODO not global
-var all_models = []
 
-var x = document.getElementById("demo");
 // default values
 var data = {
   "location": {
@@ -22,7 +19,6 @@ var toggle = function (element) {
   else {
     $(".custom_location").hide()
     if (user_location !== undefined) {
-      console.log("user locatoin", user_location);
       $("#user-location").text("Latitude: " + user_location.coords.latitude + ", Longitude: " + user_location.coords.longitude)
       $("._user-location-label").show()
     }
@@ -63,7 +59,6 @@ var getDepartureTimes = function () {
       return
     }
     var data_list_json = JSON.parse(data)
-    console.log(data_list_json)
     var bus_data_list = _.map(data_list_json, function (bus_data) {
       return JSON.parse(bus_data)
     })
@@ -83,7 +78,6 @@ var getDepartureTimes = function () {
     console.log("bus_stops: ", bus_stops)
     console.log(bus_data_list)
 
-    console.log(_.map(bus_data_list, function (bus_data) { return bus_data.body.predictions }))
     _.map(bus_data_list, function (bus_data) {
       var handle_predictions = function (predictions) {
         var handle_prediction = function (prediction) {
@@ -118,17 +112,6 @@ var getDepartureTimes = function () {
             } else {
               handle_direction(prediction.direction)
             }
-          } else {
-            // this creates a placeholder prediction, for when a bus
-            // stop has no predictions
-            //if (predictions.constructor !== Array) {
-              //var micro = {
-                //routeTag: prediction["@routeTag"],
-                //routeTitle: prediction["@routeTitle"],
-                //stopTag: prediction["@stopTag"]
-              //}
-              //bus_stops[bus_data.body.stopId].predictions.push(micro)
-            //}
           }
         }
         // note that this case rarely occurs, if ever
@@ -146,21 +129,16 @@ var getDepartureTimes = function () {
     })
     console.log(bus_stops)
 
-    // TODO: sort each bus_stop.predictions
-    // TODO: sort collection based on nearest time
-    // TODO: this isn't that nice
     var stop_models = []
     _.each(bus_stops, function (bus_stop, key) {
       bus_stop.predictions.sort(function(a, b) {
         if (a == undefined) {
-          console.log("yoyoyo")
           return 1
         }
         if (b == undefined)
           return -1
         return parseInt(a.epochTime) - parseInt(b.epochTime)
       })
-      console.log(_.map(bus_stop.predictions, function (p) { return parseInt(p.epochTime) }))
       var stop_model = new Test.Models.BusStop({
         "agencyTitle": bus_stop.agencyTitle,
         "stopTitle": bus_stop.stopTitle,
@@ -177,11 +155,10 @@ var getDepartureTimes = function () {
     $("#test").prepend(stops_view.render().el);
 
     if ($("input[name='custom_location_checkbox']").is(":checked")) {
-      console.log("using custom location")
-      showMap(custom_location)
+      showMap(custom_location, stop_models)
     } else {
       if (user_location !== undefined) {
-        showMap(user_location)
+        showMap(user_location, stop_models)
       } else {
         alert("Cannot get your location.")
       }
@@ -198,7 +175,6 @@ function getLocation() {
 }
 
 function savePosition(position) {
-  console.log("getting location")
   user_location = position
 }
 
@@ -219,7 +195,7 @@ function showError(error) {
   }
 }
 
-function showMap(position) {
+function showMap(position, stop_models) {
   lat = position.coords.latitude;
   lon = position.coords.longitude;
 
@@ -241,7 +217,7 @@ function showMap(position) {
   var marker_min_threshold = 10 * 60
   var time_now = Date.now()
 
-  _.each(all_models, function(model) {
+  _.each(stop_models, function(model) {
     if (
       model.get("predictions")[0] &&
       model.get("predictions")[0].epochTime &&
@@ -266,14 +242,13 @@ function showMap(position) {
           )) / 20 + 5
         };
 
-        console.log("radius", circleOptions.radius)
         // Add the circle for this city to the map.
         cityCircle = new google.maps.Circle(circleOptions);
       }
     }
   })
 
-  _.each(all_models, function(model) {
+  _.each(stop_models, function(model) {
     if (
       model.get("predictions")[0] &&
       model.get("predictions")[0].epochTime &&

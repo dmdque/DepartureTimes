@@ -44,8 +44,6 @@ def get_closest():
     if all_stops_kdtree == None:
         load_db()
 
-    print "num_nearest"
-    print num_nearest
     closest = closest_n_stops_kdtree(all_stops_kdtree, loc, num_nearest)
     if closest == None:
         return "distance error"
@@ -55,7 +53,6 @@ def get_closest():
 
     closest_stops_json = []
     miss_count = 0 # for testing purposes
-    print len(closest)
     for bus_stop in closest:
         time_now = time.time()
         print bus_stop.stopId
@@ -142,13 +139,8 @@ def get_route(routeTag, agency):
 def get_routes(agency):
     routes = requests.get("http://webservices.nextbus.com/service/publicXMLFeed?command=routeList&a=" + agency).content
     routes_dict = xmltodict.parse(routes)
-    i = 0
     for route in routes_dict["body"]["route"]:
-        #if i > 5:
-            #break
         get_route(route["@tag"], agency)
-        print i
-        i += 1
 
 def get_all_agency_routes(agencies):
     for agency in agencies:
@@ -164,7 +156,7 @@ def refresh_db():
     agencies = ["sf-muni", "actransit", "sf-mission-bay", "unitrans", "ucsf", "dumbarton", "emery"]
     get_all_agency_routes(agencies)
     store_all_stops(all_stops)
-    #print len(all_stops)
+    print len(all_stops)
 
 # None => None
 # loads all stops from database and stores it in all_stops
