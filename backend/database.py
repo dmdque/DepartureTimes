@@ -17,7 +17,7 @@ def init_db():
 
 # str, list, bool => list
 # query helper which executes query and returns cursor
-# from flask sqlite documentation
+# function copied from flask sqlite documentation
 def query_db(query, args=(), one=False):
     cur = connect_db().execute(query, args)
     rv = cur.fetchall()

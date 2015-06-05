@@ -27,7 +27,7 @@ all_stops_kdtree = None
 def get_index():
     return render_template('index.html')
 
-# None -> JSONstring
+# None -> jsonstring
 # calculates num_nearest closest stops by querying NextBus API, and sends the
 # data back to the client
 @app.route('/get-closest')
