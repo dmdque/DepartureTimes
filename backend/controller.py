@@ -20,7 +20,7 @@ cache_limit = 100
 cache_stops = {}
 cache_timeout = 5 * 60
 
-all_stops = []
+all_stops_list = []
 all_stops_kdtree = None
 
 @app.route("/")
@@ -33,7 +33,7 @@ def get_index():
 # returns "distance error" if user location is too far away from bus stops
 @app.route('/get-closest')
 def get_closest():
-    global all_stops
+    global all_stops_list
     global all_stops_kdtree
     loc = Location(
         float(request.args.get('location[coords][latitude]')),
@@ -95,7 +95,7 @@ def closest_n_stops_kdtree(stops_kdtree, loc, n):
     # note that this kdtree implementation can only handle sets of points (no
     # metadata) thus we use the returned indecies to get the actual stop data
     def get_stop_at_index(i):
-      return all_stops[i]
+      return all_stops_list[i]
     closest_stops = map(get_stop_at_index, closest_indecies)
     return closest_stops
 
@@ -114,9 +114,9 @@ def query_stop_api(agency, routeTag, stopTag):
     return requests.get('http://webservices.nextbus.com/service/publicXMLFeed?command=predictions&a=' + agency + '&r=' + routeTag + '&s=' + stopTag).content
 
 # string, string => None
-# stores route information from api into all_stops list
+# stores route information from api into all_stops_list list
 def get_route(routeTag, agency):
-    global all_stops
+    global all_stops_list
     route_stops = requests.get("http://webservices.nextbus.com/service/publicXMLFeed?command=routeConfig&a=" + agency + "&r=" + routeTag).content
     route_stops_dict = xmltodict.parse(route_stops)
     stops = []
@@ -132,7 +132,7 @@ def get_route(routeTag, agency):
                 route_stops_dict["body"]["route"]["@tag"],
                 agency
             ))
-    all_stops += stops
+    all_stops_list += stops
 
 # str => None
 # downloads agency's route information from NextBus API
@@ -148,28 +148,28 @@ def get_all_agency_routes(agencies):
 
 # None => None
 # downloads all route information
-# all bus stops are written to database and saved in all_stops
+# all bus stops are written to database and saved in all_stops_list
 def refresh_db():
-    global all_stops
+    global all_stops_list
     init_db()
-    all_stops = []
+    all_stops_list = []
     agencies = ["sf-muni", "actransit", "sf-mission-bay", "unitrans", "ucsf", "dumbarton", "emery"]
     get_all_agency_routes(agencies)
-    store_all_stops(all_stops)
-    print len(all_stops)
+    store_all_stops(all_stops_list)
+    print len(all_stops_list)
 
 # None => None
-# loads all stops from database and stores it in all_stops
+# loads all stops from database and stores it in all_stops_list
 def load_db():
-    global all_stops
+    global all_stops_list
     global all_stops_kdtree
-    all_stops = []
-    all_stops = load_all_stops()
+    all_stops_list = []
+    all_stops_list = load_all_stops()
     def extract_coords(bus_stop):
         return [bus_stop.lat, bus_stop.lon]
-    all_stops_kdtree = spatial.KDTree(map(extract_coords, all_stops))
+    all_stops_kdtree = spatial.KDTree(map(extract_coords, all_stops_list))
 
-    print len(all_stops)
+    print len(all_stops_list)
 
 ## first-time db set up
 #refresh_db()
